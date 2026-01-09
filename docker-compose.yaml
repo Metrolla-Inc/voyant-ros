@@ -1,0 +1,21 @@
+services:
+  voyant_ros:
+    container_name: voyant_ros
+    # Adjust the image name to match the GitHub repository structure seen in docker-image.yml
+    # Typically: ghcr.io/<owner>/voyant-ros:<tag>
+    image: ghcr.io/voyant-photonics/voyant-ros:${VOYANT_DRIVER_VERSION:-latest-jazzy-rmw_fastrtps_cpp}
+    network_mode: host
+    restart: always
+    ipc: host
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - ROS_LOCALHOST_ONLY=1
+      - USE_MACADDRESS_NS=0
+      - LIDAR_INTERFACE_DEV=${LIDAR_INTERFACE_DEV:-eth0}
+      - RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}
+      - VIZ_BRIDGE=${VIZ_BRIDGE:-false}
+    # The Dockerfile entrypoint already handles 'ros2 launch voyant_ros sensor_driver_minimal_launch.py'
+    # but you can override it here if you want a specific launch file.
+    command: ros2 launch voyant_ros sensor_launch.py
