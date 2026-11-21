@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "recorded": "2026-11-21",
+  "vendors": [
+    {
+      "id": "voyant-ros",
+      "url": "https://github.com/Voyant-Photonics/voyant-ros.git",
+      "branch": "main",
+      "tags": [
+        "v*"
+      ],
+      "fork_ref": "main",
+      "base": {
+        "commit": "0d16e0a81d446fba79ea45965d686964eced0986",
+        "how": "merge-base of fork main and vendor main on 2026-11-21 (the fork's last vendor merge, b074d97 on 2026-05-06, brought in vendor 0d16e0a)"
+      }
+    }
+  ],
+  "not_checked": [
+    {
+      "name": "voyant-sdk (voyant-api .deb)",
+      "reason": "downloaded unpinned from the latest Voyant-Photonics/voyant-sdk release at image build, so it is always the vendor latest"
+    }
+  ]
+}
