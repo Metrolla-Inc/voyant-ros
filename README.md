@@ -1,5 +1,10 @@
 # Official ROS drivers for Voyant Lidars
 
+> **Metrolla fork.** The driver image takes its settings from the environment when
+> `METROLLA_DRIVER_CONTRACT=1` (docs/METROLLA_DRIVER_CONTRACT.md); without it the image behaves as
+> released. It is built with voyant-api 0.4.4 (Meadowlark / Carbon Dev Kit); the update to the
+> vendor's current release is planned in docs/VENDOR_UPDATE_PLAN.md. Tests: TESTING.md.
+
 This ROS package provides support for Voyant sensors targeting the ROS2 Humble distribution. Configure the sensor (client) address using the `config/sensor_params.yaml` file. This package only supports `ROS2 Humble` and `Ubuntu 22.04` for now, and it is not guaranteed to work with other ROS2 distributions or operating systems. Support for other distributions and operating systems will be added in the future.
 
 For Docker instructions on other ROS2 distributions and RMW implementations, refer to the [Docker Instructions](#docker-instructions) section.

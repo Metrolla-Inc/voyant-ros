@@ -1,7 +1,7 @@
 """Legacy mode stays exactly the released image's behaviour.
 
 No fleet runs this image (balena-fleets, balena-fleets-metrollaprod, core_system_containers and
-partner-us-lidar-fleet, every branch and tag and their history, checked 22 Nov 2026), and no image
+the partner fleet repository, every branch and tag and their history, checked 22 Nov 2026), and no image
 of this fork was ever pushed: every "Docker Build and Push" run failed or was cancelled. The
 released behaviour is therefore the Dockerfile on main before this change (Dockerfile-released,
 git blob 1ea7ea8 = main 7e6f9aa:Dockerfile): its shell-form ENTRYPOINT, run by Docker as
