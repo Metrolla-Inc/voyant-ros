@@ -15,6 +15,12 @@ and their history, checked 22 Nov 2026). The image's configuration changes in on
 `Config.Entrypoint` is `["/voyant_entrypoint.sh"]` instead of `["/bin/bash", "-c", "<command>"]`;
 the process the legacy image runs is the same.
 
+## Platform
+
+linux/amd64 only. voyant-api's arm64 development package ships x86-64 C++ libraries, so the driver
+cannot be built for arm64 (docs/VENDOR_UPDATE_PLAN.md); the previous workflow asked for arm64 too
+and could not have produced it.
+
 ## Which sensors
 
 The image is built with voyant-api **0.4.4** (pinned; see docs/VENDOR_UPDATE_PLAN.md), whose

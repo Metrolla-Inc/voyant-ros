@@ -2,15 +2,17 @@ name: Docker Build and Push
 
 # Images are pushed for version tags only (v*), never for a branch or a pull request, and a tag
 # that already exists in the registry is never overwritten (tags are immutable). The image is
-# built from the tagged commit. Pull requests build the same image for both platforms (natively,
-# one runner each) without logging in and without pushing.
+# built from the tagged commit. Pull requests build the same image without logging in and without
+# pushing. linux/amd64 only: voyant-api's arm64 voyant-api-dev package (0.4.4, and still 1.0.1) ships its C++
+# client libraries (libvoyant_client.a, libvoyant_protos.a, ...) built for x86-64, so the driver
+# cannot link for arm64 (docs/VENDOR_UPDATE_PLAN.md).
 # What changed from the previous workflow: pushes to main and to branches named v* no longer push
 # ghcr.io/metrolla-inc/voyant-ros:<branch>-jazzy-rmw_fastrtps_cpp; the image tag is the git tag
 # alone (as the other driver images; no image of this fork was ever pushed, every run failed);
 # the :latest-... registry cache is no longer read or written; actions are pinned by sha; the
 # vendor's pre-commit job (which failed on every run) is no longer part of the image build. A tag
-# push still pushes for linux/amd64 and linux/arm64 with this run's GITHUB_TOKEN, and now also
-# records the image digest.
+# push pushes for linux/amd64 (the old workflow also asked for linux/arm64, which cannot link) with
+# this run's GITHUB_TOKEN, and now also records the image digest.
 
 on:
   push:
@@ -23,17 +25,9 @@ permissions:
 
 jobs:
   build:
-    name: build ${{ matrix.platform }} (pull request, not pushed)
+    name: build linux/amd64 (pull request, not pushed)
     if: github.event_name == 'pull_request'
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: linux/amd64
-            runner: ubuntu-24.04
-          - platform: linux/arm64
-            runner: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
       - name: Checkout code
@@ -48,7 +42,7 @@ jobs:
         with:
           context: .
           push: false
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64
           build-args: |
             ROS_DISTRO=jazzy
             RMW_IMPLEMENTATION=rmw_fastrtps_cpp
@@ -57,7 +51,7 @@ jobs:
       - name: Record what was built
         run: |
           {
-            echo "Built for ${{ matrix.platform }}, not pushed."
+            echo "Built for linux/amd64, not pushed."
             echo "Build digest (local, not a registry digest): ${{ steps.build.outputs.digest }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -126,18 +120,15 @@ jobs:
           fi
           echo "$IMAGE does not exist yet"
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
-      - name: Build and push Docker image for amd64 and arm64
+      - name: Build and push Docker image for amd64
         id: build
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           build-args: |
             ROS_DISTRO=jazzy

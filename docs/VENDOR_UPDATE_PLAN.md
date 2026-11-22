@@ -50,6 +50,16 @@ From `git diff 0d16e0a v1.0.1` and the voyant-sdk release notes 0.4.5 to 1.0.1:
   the first-frame wait now sleeps; SIGTERM is still not bound and `rclcpp::spin` still follows the
   loop, so this fork's stop fix still applies.
 
+## arm64: not possible with Voyant's packages (report to Voyant)
+
+voyant-api's arm64 `voyant-api-dev` package ships its C++ client libraries built for x86-64: in
+0.4.4 `libvoyant_client.a`, `libvoyant_protos.a`, `libvoyant_playback.a` and
+`libvoyant_data_recorder.a`; in 1.0.1 still `libcarbon_client_cpp.a`, `libcarbon_config.a`,
+`libvoyant_playback.a` and `libvoyant_data_recorder.a` (checked with `ar x` and `file`, the ELF
+machine field only). The arm64 link fails ("Relocations in generic ELF (EM: 62)", CI run of this
+change), so the image is built for linux/amd64 only, before and after the update, until Voyant
+fixes the package. The Rust-side libraries and the tools are aarch64.
+
 ## Why not now
 
 1. It swaps which hardware works. Which Voyant units Metrolla has, or will deploy, and their
