@@ -119,7 +119,7 @@ NOT_IN_CONTRACT = {
 # among them: the stack may pass its own METROLLA_* variables to every service.
 STRICT_PREFIXES = ("VOYANT_", "LIDAR_", "SENSOR_", "DATA_", "DEVICE_", "HOST_", "TIME_", "FRAME_",
                    "POINTCLOUD_", "PUBLISH_", "BINDING_", "INTERFACE_", "MULTICAST_", "TOPIC_",
-                   "TIMESTAMP_", "USE_LIDAR", "ROS_FRAME", "VIZ_", "DUAL_")
+                   "TIMESTAMP_", "USE_LIDAR", "ROS_FRAME", "DUAL_")
 
 ACCEPTED = {
     "LIDAR_MODEL": f"a Voyant model this image receives: {model_list()}",
@@ -400,7 +400,7 @@ def parse(env: Mapping[str, str],
 
     # Unknown variables under this image's prefixes.
     for name in sorted(env):
-        if name in KNOWN or not name.startswith(STRICT_PREFIXES):
+        if name in KNOWN or not (name.startswith(STRICT_PREFIXES) or name in NOT_IN_CONTRACT):
             continue
         if name in NOT_IN_CONTRACT:
             hint = f" ({NOT_IN_CONTRACT[name]})"

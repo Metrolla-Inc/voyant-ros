@@ -121,3 +121,13 @@ def test_actions_pinned_by_sha(path):
 def test_released_actions_were_not_pinned():
     uses = re.findall(r"uses:\s*([^\s#]+)", released(".github/workflows/docker-image.yml"))
     assert not all(re.fullmatch(r"[\w.-]+/[\w./-]+@[0-9a-f]{40}", u) for u in uses)
+
+
+# 8. The workflow built linux/arm64, which cannot link: voyant-api's arm64 dev package ships its C++
+#    client libraries built for x86-64.
+@pytest.mark.parametrize("text,fixed", [
+    (current(".github/workflows/docker-image.yml"), True),
+    (released(".github/workflows/docker-image.yml"), False)], ids=["current", "released"])
+def test_no_arm64_image(text, fixed):
+    code = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+    assert ("arm64" not in code and "platforms: linux/amd64" in code) is fixed

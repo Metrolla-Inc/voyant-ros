@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from contract_run import read_case, record
+from harness import IMAGE_ENV
 
 HERE = Path(__file__).resolve().parent
 CASES = sorted((HERE / "cases").glob("*.env"))
@@ -27,6 +28,7 @@ def test_cases_exist():
 def test_contract_golden(case, argv):
     env = read_case(case)
     env.setdefault("METROLLA_DRIVER_CONTRACT", "1")  # as the image gets it
+    env = {**IMAGE_ENV, **env}  # the Dockerfile's ENV is in every container's environment
     got = record(argv, env)
     golden = HERE / "golden" / "contract" / f"{case.stem}{'.json' if '--json' in argv else ''}.golden"
     if os.environ.get("REGEN"):

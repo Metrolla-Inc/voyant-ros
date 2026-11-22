@@ -434,3 +434,10 @@ def test_dockerfile_installs_the_contract():
     assert "COPY docker/contract-entrypoint.sh docker/voyant_env.py /opt/metrolla/voyant/" in dockerfile
     assert "python3 -I /opt/metrolla/voyant/voyant_env.py selfcheck" in dockerfile
     assert Path(REPO / "docker" / "voyant_entrypoint.sh").stat().st_mode & 0o111
+
+
+def test_the_images_own_environment_passes():
+    """The Dockerfile's ENV lines (and the base image's) are in every container's environment."""
+    parse(ROS_DISTRO="jazzy", DEBIAN_FRONTEND="noninteractive",
+          RMW_IMPLEMENTATION_ARG="rmw_fastrtps_cpp", VIZ_BRIDGE_ARG="false",
+          BUILD_HOME="/var/lib/build")
