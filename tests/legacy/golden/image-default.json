@@ -1,0 +1,20 @@
+{
+  "exit": 0,
+  "started": [
+    {
+      "argv": [
+        "ros2",
+        "launch",
+        "voyant_ros",
+        "sensor_driver_minimal_launch.py"
+      ],
+      "env": {
+        "ROS_DISTRO": "jazzy",
+        "SOURCED": "/ros2_ws/install",
+        "VIZ_BRIDGE_ARG": "false"
+      }
+    }
+  ],
+  "stderr": "",
+  "stdout": "VIZ_BRIDGE_ARG value: false\nStarting with minimal sensor driver\n"
+}

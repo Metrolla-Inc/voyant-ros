@@ -1,0 +1,33 @@
+{
+  "exit": 0,
+  "started": [
+    {
+      "argv": [
+        "ros2",
+        "launch",
+        "foxglove_bridge",
+        "foxglove_bridge_launch.xml"
+      ],
+      "env": {
+        "ROS_DISTRO": "jazzy",
+        "SOURCED": "/ros2_ws/install",
+        "VIZ_BRIDGE_ARG": "true"
+      }
+    },
+    {
+      "argv": [
+        "ros2",
+        "launch",
+        "voyant_ros",
+        "sensor_driver_minimal_launch.py"
+      ],
+      "env": {
+        "ROS_DISTRO": "jazzy",
+        "SOURCED": "/ros2_ws/install",
+        "VIZ_BRIDGE_ARG": "true"
+      }
+    }
+  ],
+  "stderr": "",
+  "stdout": "VIZ_BRIDGE_ARG value: true\nStarting with Foxglove bridge enabled\n"
+}

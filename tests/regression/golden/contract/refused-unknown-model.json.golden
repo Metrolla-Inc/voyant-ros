@@ -1,0 +1,9 @@
+exit: 1
+--- stdout
+{
+  "refused": [
+    "LIDAR_MODEL='voyant-ml-1' is not a Voyant model this image knows; accepted (any case, '_' or '-', optional 'voyant-' prefix): meadowlark, mdl, carbon-dev-kit, carbon-devkit"
+  ]
+}
+--- stderr
+voyant-driver: refusing to start: LIDAR_MODEL='voyant-ml-1' is not a Voyant model this image knows; accepted (any case, '_' or '-', optional 'voyant-' prefix): meadowlark, mdl, carbon-dev-kit, carbon-devkit

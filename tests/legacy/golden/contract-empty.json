@@ -1,0 +1,22 @@
+{
+  "exit": 0,
+  "started": [
+    {
+      "argv": [
+        "ros2",
+        "launch",
+        "voyant_ros",
+        "sensor_driver_minimal_launch.py"
+      ],
+      "env": {
+        "METROLLA_DRIVER_CONTRACT": "",
+        "ROS_DISTRO": "jazzy",
+        "ROS_LOCALHOST_ONLY": "1",
+        "SOURCED": "/ros2_ws/install",
+        "VIZ_BRIDGE_ARG": "false"
+      }
+    }
+  ],
+  "stderr": "",
+  "stdout": "VIZ_BRIDGE_ARG value: false\nStarting with minimal sensor driver\n"
+}

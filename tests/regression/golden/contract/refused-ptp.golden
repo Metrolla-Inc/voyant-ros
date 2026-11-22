@@ -1,0 +1,4 @@
+exit: 1
+--- stdout
+--- stderr
+voyant-driver: refusing to start: TIME_MODE='ptp' is not supported by this image; accepted: host (the default). voyant-api 0.4.4 stamps every frame with the host's clock as it arrives and passes no sensor clock through; keep the host's clock synchronised instead

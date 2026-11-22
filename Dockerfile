@@ -41,8 +41,11 @@ RUN if [ "$RMW_IMPLEMENTATION_ARG" = "rmw_cyclonedds_cpp" ]; then \
     fi
 
 # Install Cap'n Proto from source used by Voyant API
+# (checksum recorded 2026-11-22; the download was not checked before)
+ARG CAPNP_SHA256=07167580e563f5e821e3b2af1c238c16ec7181612650c5901330fa9a0da50939
 WORKDIR /tmp
-RUN curl -O https://capnproto.org/capnproto-c++-1.1.0.tar.gz && \
+RUN curl -fsSLO https://capnproto.org/capnproto-c++-1.1.0.tar.gz && \
+    echo "${CAPNP_SHA256}  capnproto-c++-1.1.0.tar.gz" > capnp.sha256 && sha256sum -c capnp.sha256 && \
     tar zxf capnproto-c++-1.1.0.tar.gz && \
     cd capnproto-c++-1.1.0 && \
     ./configure && \
@@ -50,17 +53,24 @@ RUN curl -O https://capnproto.org/capnproto-c++-1.1.0.tar.gz && \
     make install && \
     ldconfig && \
     cd .. && \
-    rm -rf capnproto-c++-1.1.0*
+    rm -rf capnproto-c++-1.1.0* capnp.sha256
 
 # Set working directory
 WORKDIR /workspace
 
-# Download and install the latest release packages from GitHub
+# Download and install the voyant-api release packages from GitHub, pinned: this driver is written
+# against voyant-api 0.4.4 (the vendor commit this fork is based on, 0d16e0a, "Update dockerfile
+# for v0.4.4 voyant-api release"). The image used to take whatever release was latest: every build
+# of this fork since May 2026 failed (on 21 Nov because voyant-api 1.0.1 no longer ships
+# voyant_frame_wrapper.hpp). Updating is the vendor update in docs/VENDOR_UPDATE_PLAN.md.
+# voyant-api is proprietary (binary only; see that file).
+ARG VOYANT_API_VERSION=0.4.4
+ARG VOYANT_API_SHA256=1c2b69f7e170a0299d1f0293cff2f6f8bbd3a1897f518d8960dee3dfa1f548dd
 RUN ARCH=$(dpkg --print-architecture) && \
-    TARBALL_URL=$(curl -s https://api.github.com/repos/Voyant-Photonics/voyant-sdk/releases/latest | \
-        jq -r '.assets[] | select(.name | endswith(".tar.gz")) | .browser_download_url' | head -n 1) && \
-    if [ -z "$TARBALL_URL" ]; then echo "No .tar.gz asset found in latest release" >&2; exit 1; fi && \
+    TARBALL_URL="https://github.com/Voyant-Photonics/voyant-sdk/releases/download/v${VOYANT_API_VERSION}/voyant-api-debian-v${VOYANT_API_VERSION}.tar.gz" && \
     wget -O /tmp/voyant-api.tar.gz "$TARBALL_URL" && \
+    echo "${VOYANT_API_SHA256}  /tmp/voyant-api.tar.gz" > /tmp/voyant-api.sha256 && \
+    sha256sum -c /tmp/voyant-api.sha256 && \
     mkdir -p /tmp/voyant-api-extract && \
     tar -xzf /tmp/voyant-api.tar.gz -C /tmp/voyant-api-extract && \
     API_DEB=$(find /tmp/voyant-api-extract -name "voyant-api_*${ARCH}.deb" | head -n 1) && \
@@ -68,7 +78,7 @@ RUN ARCH=$(dpkg --print-architecture) && \
     if [ -z "$API_DEB" ] || [ -z "$DEV_DEB" ]; then echo "Required .deb packages for ARCH=$ARCH not found" >&2; exit 1; fi && \
     apt-get install -y "$API_DEB" "$DEV_DEB" && \
     apt-get clean && \
-    rm -rf /tmp/voyant-api.tar.gz /tmp/voyant-api-extract /var/lib/apt/lists/*
+    rm -rf /tmp/voyant-api.tar.gz /tmp/voyant-api.sha256 /tmp/voyant-api-extract /var/lib/apt/lists/*
 
 # Create a workspace directory
 WORKDIR /ros2_ws/src
@@ -91,14 +101,16 @@ RUN if [ "$VIZ_BRIDGE_ARG" = "true" ]; then \
 
 # Set up entrypoint
 RUN echo "source /ros2_ws/install/setup.bash" >> ~/.bashrc
-# Entry point
-ENTRYPOINT source /ros2_ws/install/setup.bash && \
-    echo "VIZ_BRIDGE_ARG value: $VIZ_BRIDGE_ARG" && \
-    if [ "$VIZ_BRIDGE_ARG" = "true" ]; then \
-    echo "Starting with Foxglove bridge enabled" && \
-    ros2 launch foxglove_bridge foxglove_bridge_launch.xml & \
-    ros2 launch voyant_ros sensor_driver_minimal_launch.py; \
-    else \
-    echo "Starting with minimal sensor driver" && \
-    ros2 launch voyant_ros sensor_driver_minimal_launch.py; \
-    fi
+
+# Metrolla driver contract (opt-in with METROLLA_DRIVER_CONTRACT=1; docs/METROLLA_DRIVER_CONTRACT.md).
+# selfcheck compares the parameters the contract sets with the ones the node in this image
+# declares, so a vendor update that renames one fails here, not on a unit.
+COPY docker/contract-entrypoint.sh docker/voyant_env.py /opt/metrolla/voyant/
+RUN chmod 0755 /opt/metrolla/voyant/contract-entrypoint.sh /opt/metrolla/voyant/voyant_env.py \
+    && python3 -I /opt/metrolla/voyant/voyant_env.py selfcheck
+
+# Entry point. Without the contract it runs the released entrypoint command, unchanged (it was
+# the shell-form ENTRYPOINT here; docker/voyant_entrypoint.sh holds it byte for byte).
+COPY docker/voyant_entrypoint.sh /voyant_entrypoint.sh
+RUN chmod 0755 /voyant_entrypoint.sh
+ENTRYPOINT ["/voyant_entrypoint.sh"]

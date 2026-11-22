@@ -1,0 +1,21 @@
+exit: 1
+--- stdout
+{
+  "refused": [
+    "SENSOR_IP='192.168.20.020' is not an IPv4 address; accepted: the sensor's own IPv4 address in dotted decimal without leading zeros, for example 192.168.20.20",
+    "SENSOR_ID='East-1' is not a sensor id; accepted: 1-31 characters, a lowercase letter then lowercase letters, digits or single '_' (it becomes the node's ROS namespace)",
+    "DATA_PORT='80' is not a usable UDP port; accepted: a whole number 1024-65535 without leading zeros (default 4444, the port the sensor streams to)",
+    "HOST_IP='eth0' is not an IPv4 address; accepted: the host's IPv4 address on the sensor network (optionally with /1-/32) in dotted decimal without leading zeros, for example 192.168.20.20",
+    "FRAME_ID='1lidar' is not a frame id; accepted: 1-64 characters, letters, digits and '_', not starting with a digit (default voyant_sensor)",
+    "POINTCLOUD_TOPIC='a//b' is not a ROS topic name; accepted: '/'-separated tokens of letters, digits and single '_', each starting with a letter, absolute (/x) or relative to the SENSOR_ID namespace (default point_cloud)",
+    "VOYANT_RUN_DIR='tmp' is not an absolute directory path; accepted: an absolute path of letters, digits, '_', '.', '-' and '/' (default /tmp/voyant)"
+  ]
+}
+--- stderr
+voyant-driver: refusing to start: SENSOR_IP='192.168.20.020' is not an IPv4 address; accepted: the sensor's own IPv4 address in dotted decimal without leading zeros, for example 192.168.20.20
+voyant-driver: refusing to start: SENSOR_ID='East-1' is not a sensor id; accepted: 1-31 characters, a lowercase letter then lowercase letters, digits or single '_' (it becomes the node's ROS namespace)
+voyant-driver: refusing to start: DATA_PORT='80' is not a usable UDP port; accepted: a whole number 1024-65535 without leading zeros (default 4444, the port the sensor streams to)
+voyant-driver: refusing to start: HOST_IP='eth0' is not an IPv4 address; accepted: the host's IPv4 address on the sensor network (optionally with /1-/32) in dotted decimal without leading zeros, for example 192.168.20.20
+voyant-driver: refusing to start: FRAME_ID='1lidar' is not a frame id; accepted: 1-64 characters, letters, digits and '_', not starting with a digit (default voyant_sensor)
+voyant-driver: refusing to start: POINTCLOUD_TOPIC='a//b' is not a ROS topic name; accepted: '/'-separated tokens of letters, digits and single '_', each starting with a letter, absolute (/x) or relative to the SENSOR_ID namespace (default point_cloud)
+voyant-driver: refusing to start: VOYANT_RUN_DIR='tmp' is not an absolute directory path; accepted: an absolute path of letters, digits, '_', '.', '-' and '/' (default /tmp/voyant)

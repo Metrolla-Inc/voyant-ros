@@ -1,0 +1,4 @@
+exit: 1
+--- stdout
+--- stderr
+voyant-driver: refusing to start: HOST_IP='192.168.30.100/24': the sensor at 192.168.20.20 is not in the host's subnet 192.168.30.0/24; accepted: a host address in the sensor's subnet

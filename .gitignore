@@ -4,3 +4,7 @@
 build
 install
 log
+
+# Python test caches
+__pycache__/
+.pytest_cache/

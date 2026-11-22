@@ -1,0 +1,25 @@
+{
+  "exit": 0,
+  "started": [
+    {
+      "argv": [
+        "ros2",
+        "launch",
+        "voyant_ros",
+        "sensor_driver_minimal_launch.py"
+      ],
+      "env": {
+        "LIDAR_INTERFACE_DEV": "eth0",
+        "RMW_IMPLEMENTATION": "rmw_fastrtps_cpp",
+        "ROS_DISTRO": "jazzy",
+        "ROS_LOCALHOST_ONLY": "1",
+        "SOURCED": "/ros2_ws/install",
+        "USE_MACADDRESS_NS": "0",
+        "VIZ_BRIDGE": "false",
+        "VIZ_BRIDGE_ARG": "false"
+      }
+    }
+  ],
+  "stderr": "",
+  "stdout": "VIZ_BRIDGE_ARG value: false\nStarting with minimal sensor driver\n"
+}

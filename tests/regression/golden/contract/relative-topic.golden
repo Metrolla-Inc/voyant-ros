@@ -1,0 +1,17 @@
+exit: 0
+--- stdout
+# Rendered from the environment by the voyant-driver image entrypoint; do not edit.
+# LIDAR_MODEL meadowlark = Voyant Carbon Dev Kit (Meadowlark, device id MDL-nnn); SENSOR_IP 127.0.0.3 (the driver joins the multicast group 224.0.0.0 on port 4444 and does not filter by sender)
+# TIME_MODE host: frames are stamped with the host's clock as they arrive
+# topic /west/lidar/points, frame voyant_sensor
+/**:
+  ros__parameters:
+    binding_address: "0.0.0.0:4444"  # DATA_PORT on every address (the multicast stream)
+    multicast_group: "224.0.0.0"  # the Meadowlark stream's group
+    interface_address: "127.0.0.1"  # join the group on this host address (route to SENSOR_IP)
+    spn_filter: true  # publish valid points only (drop_reason SUCCESS), as the released image does
+    timestamp_mode: 0  # TIME_MODE host: the client's frame stamp (host clock)
+    frame_id: "voyant_sensor"  # FRAME_ID
+    point_format: 1  # MDL_STANDARD: x y z v snr drop_reason timestamp_nsecs point_idx
+# exec: /ros2_ws/install/voyant_ros/lib/voyant_ros/voyant_sensor_node --ros-args -r __ns:=/west -r point_cloud:=lidar/points --params-file /tmp/voyant/params.yaml
+--- stderr

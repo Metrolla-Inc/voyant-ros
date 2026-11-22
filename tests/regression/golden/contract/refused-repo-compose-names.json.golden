@@ -1,0 +1,11 @@
+exit: 1
+--- stdout
+{
+  "refused": [
+    "LIDAR_INTERFACE_DEV is not a variable this image knows (did you mean HOST_IP?); accepted: LIDAR_MODEL, SENSOR_IP, SENSOR_ID, DATA_PORT, DEVICE_PORT, HOST_IP, FRAME_ID, POINTCLOUD_TOPIC, TIME_MODE, PUBLISH_SCAN, VOYANT_RUN_DIR, DUAL_LIDAR",
+    "VIZ_BRIDGE is not a variable this image knows (contract mode starts the driver only, without a Foxglove bridge; unset it); accepted: LIDAR_MODEL, SENSOR_IP, SENSOR_ID, DATA_PORT, DEVICE_PORT, HOST_IP, FRAME_ID, POINTCLOUD_TOPIC, TIME_MODE, PUBLISH_SCAN, VOYANT_RUN_DIR, DUAL_LIDAR"
+  ]
+}
+--- stderr
+voyant-driver: refusing to start: LIDAR_INTERFACE_DEV is not a variable this image knows (did you mean HOST_IP?); accepted: LIDAR_MODEL, SENSOR_IP, SENSOR_ID, DATA_PORT, DEVICE_PORT, HOST_IP, FRAME_ID, POINTCLOUD_TOPIC, TIME_MODE, PUBLISH_SCAN, VOYANT_RUN_DIR, DUAL_LIDAR
+voyant-driver: refusing to start: VIZ_BRIDGE is not a variable this image knows (contract mode starts the driver only, without a Foxglove bridge; unset it); accepted: LIDAR_MODEL, SENSOR_IP, SENSOR_ID, DATA_PORT, DEVICE_PORT, HOST_IP, FRAME_ID, POINTCLOUD_TOPIC, TIME_MODE, PUBLISH_SCAN, VOYANT_RUN_DIR, DUAL_LIDAR
