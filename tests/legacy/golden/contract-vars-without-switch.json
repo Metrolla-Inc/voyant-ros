@@ -1,0 +1,25 @@
+{
+  "exit": 0,
+  "started": [
+    {
+      "argv": [
+        "ros2",
+        "launch",
+        "voyant_ros",
+        "sensor_driver_minimal_launch.py"
+      ],
+      "env": {
+        "DATA_PORT": "4444",
+        "FRAME_ID": "east",
+        "HOST_IP": "192.168.20.100",
+        "LIDAR_MODEL": "meadowlark",
+        "ROS_DISTRO": "jazzy",
+        "SENSOR_IP": "192.168.20.20",
+        "SOURCED": "/ros2_ws/install",
+        "VIZ_BRIDGE_ARG": "false"
+      }
+    }
+  ],
+  "stderr": "",
+  "stdout": "VIZ_BRIDGE_ARG value: false\nStarting with minimal sensor driver\n"
+}

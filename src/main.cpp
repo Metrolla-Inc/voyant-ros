@@ -7,9 +7,23 @@
 
 int main(int argc, char **argv)
 {
-  rclcpp::init(argc, argv);
-  auto node = std::make_shared<voyant_ros::VoyantSensorDriver>();
-  rclcpp::spin(node);
+  // SIGINT and SIGTERM (docker stop) both set the Voyant client's stop flag
+  // (VoyantSensorDriver::initialize), which ends the receive loops. rclcpp installs no signal
+  // handlers of its own: they would replace that flag's handler for SIGTERM and shut ROS down
+  // while the loops still run.
+  rclcpp::init(argc, argv, rclcpp::InitOptions(), rclcpp::SignalHandlerOptions::None);
+  int code = 0;
+  try
+  {
+    // The constructor receives and publishes until a stop signal or an error; there is nothing
+    // left to spin for afterwards (spinning here waited forever after a SIGINT).
+    auto node = std::make_shared<voyant_ros::VoyantSensorDriver>();
+  }
+  catch(const std::exception &e)
+  {
+    RCLCPP_FATAL(rclcpp::get_logger("voyant_sensor_node"), "[-] Fatal: %s", e.what());
+    code = 1;
+  }
   rclcpp::shutdown();
-  return 0;
+  return code;
 }

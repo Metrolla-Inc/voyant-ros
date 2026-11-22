@@ -1,0 +1,52 @@
+exit: 0
+--- stdout
+{
+  "model": {
+    "key": "meadowlark",
+    "label": "Voyant Carbon Dev Kit (Meadowlark, device id MDL-nnn)"
+  },
+  "sensor_ip": "192.168.20.20",
+  "data_port": 4444,
+  "multicast_group": "224.0.0.0",
+  "interface_address": "192.168.20.100",
+  "interface_from": "HOST_IP",
+  "topic": "/east/point_cloud",
+  "metadata_topic": "/east/device_metadata",
+  "frame_id": "east_lidar",
+  "time_mode": "host",
+  "params_file": "/tmp/voyant/params.yaml",
+  "parameters": {
+    "binding_address": "0.0.0.0:4444",
+    "multicast_group": "224.0.0.0",
+    "interface_address": "192.168.20.100",
+    "spn_filter": true,
+    "timestamp_mode": 0,
+    "frame_id": "east_lidar",
+    "point_format": 1
+  },
+  "argv": [
+    "/ros2_ws/install/voyant_ros/lib/voyant_ros/voyant_sensor_node",
+    "--ros-args",
+    "-r",
+    "__ns:=/east",
+    "-r",
+    "point_cloud:=point_cloud",
+    "--params-file",
+    "/tmp/voyant/params.yaml"
+  ],
+  "sources": {
+    "DATA_PORT": "env",
+    "DEVICE_PORT": "default",
+    "FRAME_ID": "env",
+    "HOST_IP": "env",
+    "LIDAR_MODEL": "env",
+    "POINTCLOUD_TOPIC": "default",
+    "PUBLISH_SCAN": "default",
+    "SENSOR_ID": "env",
+    "SENSOR_IP": "env",
+    "TIME_MODE": "env",
+    "VOYANT_RUN_DIR": "default"
+  },
+  "params_yaml": "# Rendered from the environment by the voyant-driver image entrypoint; do not edit.\n# LIDAR_MODEL meadowlark = Voyant Carbon Dev Kit (Meadowlark, device id MDL-nnn); SENSOR_IP 192.168.20.20 (the driver joins the multicast group 224.0.0.0 on port 4444 and does not filter by sender)\n# TIME_MODE host: frames are stamped with the host's clock as they arrive\n# topic /east/point_cloud, frame east_lidar\n/**:\n  ros__parameters:\n    binding_address: \"0.0.0.0:4444\"  # DATA_PORT on every address (the multicast stream)\n    multicast_group: \"224.0.0.0\"  # the Meadowlark stream's group\n    interface_address: \"192.168.20.100\"  # join the group on this host address (HOST_IP)\n    spn_filter: true  # publish valid points only (drop_reason SUCCESS), as the released image does\n    timestamp_mode: 0  # TIME_MODE host: the client's frame stamp (host clock)\n    frame_id: \"east_lidar\"  # FRAME_ID\n    point_format: 1  # MDL_STANDARD: x y z v snr drop_reason timestamp_nsecs point_idx\n"
+}
+--- stderr

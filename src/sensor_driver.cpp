@@ -5,6 +5,7 @@
 
 #include "voyant_ros/sensor_driver.hpp"
 #include <chrono>
+#include <csignal>
 #include <thread>
 
 namespace voyant_ros
@@ -61,7 +62,8 @@ void VoyantSensorDriver::getParams()
 void VoyantSensorDriver::initialize()
 {
   RCLCPP_INFO(get_logger(), "[+] Initializing Voyant Sensor Driver");
-  VoyantClient::setupSignalHandling();
+  VoyantClient::setupSignalHandling(SIGINT);
+  VoyantClient::setupSignalHandling(SIGTERM); // docker stop / systemd stop
 
   // Try to connect to the sensor
   try
@@ -77,10 +79,10 @@ void VoyantSensorDriver::initialize()
     // Check if the client is connected
     if(!client_->isValid())
     {
-      RCLCPP_ERROR(get_logger(), "[-] Failed to initialize the Voyant Sensor Driver");
-      rclcpp::shutdown();
+      throw std::runtime_error("the Voyant client did not start (is binding_address's port in "
+                               "use, or not a local address?)");
     }
-    while(!VoyantClient::isTerminated())
+    while(!VoyantClient::isTerminated() && rclcpp::ok())
     {
       if(client_->tryReceiveNextFrame())
       {
@@ -90,12 +92,15 @@ void VoyantSensorDriver::initialize()
 
         return; // Successful connection
       }
+      // Wait for the sensor without spinning a core.
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    throw std::runtime_error("[-] Sensor connection failed");
+    RCLCPP_INFO(get_logger(), "[+] Stopped before the first frame arrived");
   }
   catch(const std::exception &e)
   {
     RCLCPP_ERROR(get_logger(), "[-] Connection failed: %s", e.what());
+    throw; // main exits 1: a driver that cannot receive must not look healthy
   }
 }
 
@@ -141,7 +146,7 @@ void VoyantSensorDriver::publishPointCloud()
     catch(const std::exception &e)
     {
       RCLCPP_ERROR(get_logger(), "[-] Error: %s", e.what());
-      rclcpp::shutdown();
+      throw; // main exits 1 (it shut ROS down and exited 0 before)
     }
     // sleep for some time to avoid busy looping, but sleep less when we are actively receiving frames
     std::this_thread::sleep_for(std::chrono::milliseconds(frame_received ? 1 : 10));

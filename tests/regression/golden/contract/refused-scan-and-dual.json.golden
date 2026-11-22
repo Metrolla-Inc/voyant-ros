@@ -1,0 +1,11 @@
+exit: 1
+--- stdout
+{
+  "refused": [
+    "PUBLISH_SCAN='true' is not supported by this image; accepted: unset or a false value (0, false, no, off). voyant_ros publishes point clouds only, no laser scan",
+    "DUAL_LIDAR='yes' is not supported by this image; accepted: unset or a false value (0, false, no, off). Run one container per Voyant sensor"
+  ]
+}
+--- stderr
+voyant-driver: refusing to start: PUBLISH_SCAN='true' is not supported by this image; accepted: unset or a false value (0, false, no, off). voyant_ros publishes point clouds only, no laser scan
+voyant-driver: refusing to start: DUAL_LIDAR='yes' is not supported by this image; accepted: unset or a false value (0, false, no, off). Run one container per Voyant sensor

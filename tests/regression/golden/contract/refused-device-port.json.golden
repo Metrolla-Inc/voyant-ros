@@ -1,0 +1,9 @@
+exit: 1
+--- stdout
+{
+  "refused": [
+    "DEVICE_PORT='8080' is not supported by this image; accepted: unset. The Voyant driver only receives the sensor's multicast stream on DATA_PORT; it does not use the sensor's control interface"
+  ]
+}
+--- stderr
+voyant-driver: refusing to start: DEVICE_PORT='8080' is not supported by this image; accepted: unset. The Voyant driver only receives the sensor's multicast stream on DATA_PORT; it does not use the sensor's control interface
