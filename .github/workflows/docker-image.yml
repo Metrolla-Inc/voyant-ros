@@ -1,11 +1,17 @@
 name: Docker Build and Push
 
+# Tags: v<vendor version>-metrolla.<n>, e.g. v1.0.1-metrolla.1 (owner, 22 Nov 2026: Metrolla tags
+# never reuse a vendor's tag; Voyant tags v1.0.1 itself); the push job refuses any other v* tag.
+#
 # Images are pushed for version tags only (v*), never for a branch or a pull request, and a tag
 # that already exists in the registry is never overwritten (tags are immutable). The image is
 # built from the tagged commit. Pull requests build the same image without logging in and without
 # pushing. linux/amd64 only: voyant-api's arm64 voyant-api-dev package (0.4.4, and still 1.0.1) ships its C++
-# client libraries (libvoyant_client.a, libvoyant_protos.a, ...) built for x86-64, so the driver
-# cannot link for arm64 (docs/VENDOR_UPDATE_PLAN.md).
+# client libraries (in 1.0.1 libcarbon_client_cpp.a, libcarbon_config.a, ...) built for x86-64, so
+# the driver cannot link for arm64 (docs/VENDOR_DIFF.md).
+# LICENCE: the image contains Voyant's proprietary voyant-api (binary only), redistributed with
+# Voyant's written consent (owner, 22 Nov 2026); its copyright notice stays in the image
+# (/usr/share/doc/voyant-api/copyright).
 # What changed from the previous workflow: pushes to main and to branches named v* no longer push
 # ghcr.io/metrolla-inc/voyant-ros:<branch>-jazzy-rmw_fastrtps_cpp; the image tag is the git tag
 # alone (as the other driver images; no image of this fork was ever pushed, every run failed);
@@ -90,6 +96,11 @@ jobs:
         run: |
           if [ "$REF_TYPE" != tag ]; then
             echo "refusing to push: $REF_NAME is a $REF_TYPE, images are pushed for tags only" >&2
+            exit 1
+          fi
+          # Metrolla tags never reuse a vendor's tag (owner, 22 Nov 2026): v<vendor version>-metrolla.<n>
+          if ! [[ "$REF_NAME" =~ ^v[0-9A-Za-z][0-9A-Za-z._-]*-metrolla\.[1-9][0-9]*$ ]]; then
+            echo "refusing to push: tag $REF_NAME is not v<vendor version>-metrolla.<n> (e.g. v1.0.1-metrolla.1)" >&2
             exit 1
           fi
           if [ "$(git rev-parse HEAD)" != "$GITHUB_SHA" ]; then
