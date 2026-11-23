@@ -1,4 +1,4 @@
 exit: 1
 --- stdout
 --- stderr
-voyant-driver: refusing to start: LIDAR_MODEL='carbon' is not supported by this image: Voyant Carbon sensors need voyant-api 0.5 or later (CarbonClient); this image is built with voyant-api 0.4.4, which receives the Carbon Dev Kit (Meadowlark) stream only (docs/VENDOR_UPDATE_PLAN.md); accepted: meadowlark, mdl, carbon-dev-kit, carbon-devkit
+voyant-driver: refusing to start: LIDAR_MODEL='voyant-carbon-dev-kit' is not supported by this image: the Carbon Dev Kit (Meadowlark) is not a target: voyant-api 1.0.1, which this image is built with for the Voyant Carbon, no longer receives it (docs/VENDOR_DIFF.md); accepted: carbon

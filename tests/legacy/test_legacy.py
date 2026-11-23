@@ -121,10 +121,16 @@ def test_dockerfile_keeps_user_and_has_no_cmd():
 
 
 @pytest.mark.parametrize("path,blob", [
-    ("config/sensor_params.yaml", "38b5deae6f2fb867d880a4f03c28b36baa53639f"),
+    # Voyant's v1.0.1 file (git rev-parse v1.0.1:config/sensor_params.yaml): the Carbon defaults
+    # (port 5678, group 239.255.48.84, interface 192.168.1.100, unicast, primary client, sensor
+    # time). Taken with the vendor update on purpose; the released file (38b5dea, Meadowlark:
+    # 224.0.0.0:4444 on 127.0.0.1) configured a stream voyant-api 1.0.1 cannot receive.
+    ("config/sensor_params.yaml", "58077a8a16e155e4c4c16646ad1cd43aa25d80e4"),
+    # The released file, unchanged by the vendor since (7e6f9aa and v1.0.1 have the same blob).
     ("launch/sensor_driver_minimal_launch.py", "e630a01f7f3d9b992ce58090b7f69863106df378"),
 ])
-def test_legacy_launch_and_config_unchanged(path, blob):
-    """The legacy command runs the minimal launch, which reads config/sensor_params.yaml: both are
-    the released files (git rev-parse 7e6f9aa:<path>)."""
+def test_legacy_launch_and_config(path, blob):
+    """The legacy command runs the minimal launch, which reads config/sensor_params.yaml: the
+    launch file is the released one; the parameters file is the vendor's v1.0.1 one, as the vendor
+    ships it (docs/VENDOR_DIFF.md, "Legacy mode")."""
     assert git_blob_id((REPO / path).read_bytes()) == blob

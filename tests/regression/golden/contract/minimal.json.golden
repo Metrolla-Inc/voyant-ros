@@ -2,27 +2,30 @@ exit: 0
 --- stdout
 {
   "model": {
-    "key": "meadowlark",
-    "label": "Voyant Carbon Dev Kit (Meadowlark, device id MDL-nnn)"
+    "key": "carbon",
+    "label": "Voyant Carbon (voyant-api 1.0.1, firmware FPGA v1.5.6 / MCU v4.1.0)"
   },
   "sensor_ip": "127.0.0.2",
-  "data_port": 4444,
-  "multicast_group": "224.0.0.0",
+  "data_port": 5678,
+  "multicast_group": "239.255.48.84",
   "interface_address": "127.0.0.1",
   "interface_from": "route to SENSOR_IP",
+  "sensor_register_address": "127.0.0.2:1234",
   "topic": "/point_cloud",
   "metadata_topic": "/device_metadata",
   "frame_id": "voyant_sensor",
-  "time_mode": "host",
+  "time_mode": "sensor",
   "params_file": "/tmp/voyant/params.yaml",
   "parameters": {
-    "binding_address": "0.0.0.0:4444",
-    "multicast_group": "224.0.0.0",
+    "binding_address": "0.0.0.0:5678",
+    "multicast_group": "239.255.48.84",
     "interface_address": "127.0.0.1",
-    "spn_filter": true,
+    "fpga_target_address": "127.0.0.2:1234",
+    "stream_transport": "unicast",
+    "observer_only": false,
+    "diagnostic_mode": false,
     "timestamp_mode": 0,
-    "frame_id": "voyant_sensor",
-    "point_format": 1
+    "frame_id": "voyant_sensor"
   },
   "argv": [
     "/ros2_ws/install/voyant_ros/lib/voyant_ros/voyant_sensor_node",
@@ -45,6 +48,6 @@ exit: 0
     "TIME_MODE": "default",
     "VOYANT_RUN_DIR": "default"
   },
-  "params_yaml": "# Rendered from the environment by the voyant-driver image entrypoint; do not edit.\n# LIDAR_MODEL meadowlark = Voyant Carbon Dev Kit (Meadowlark, device id MDL-nnn); SENSOR_IP 127.0.0.2 (the driver joins the multicast group 224.0.0.0 on port 4444 and does not filter by sender)\n# TIME_MODE host: frames are stamped with the host's clock as they arrive\n# topic /point_cloud, frame voyant_sensor\n/**:\n  ros__parameters:\n    binding_address: \"0.0.0.0:4444\"  # DATA_PORT on every address (the multicast stream)\n    multicast_group: \"224.0.0.0\"  # the Meadowlark stream's group\n    interface_address: \"127.0.0.1\"  # join the group on this host address (route to SENSOR_IP)\n    spn_filter: true  # publish valid points only (drop_reason SUCCESS), as the released image does\n    timestamp_mode: 0  # TIME_MODE host: the client's frame stamp (host clock)\n    frame_id: \"voyant_sensor\"  # FRAME_ID\n    point_format: 1  # MDL_STANDARD: x y z v snr drop_reason timestamp_nsecs point_idx\n"
+  "params_yaml": "# Rendered from the environment by the voyant-driver image entrypoint; do not edit.\n# LIDAR_MODEL carbon = Voyant Carbon (voyant-api 1.0.1, firmware FPGA v1.5.6 / MCU v4.1.0); SENSOR_IP 127.0.0.2; the client receives on port 5678 (127.0.0.1) and is the sensor's primary client\n# TIME_MODE sensor: the sensor's frame time (its clock disciplined to the host's)\n# topic /point_cloud, frame voyant_sensor\n/**:\n  ros__parameters:\n    binding_address: \"0.0.0.0:5678\"  # DATA_PORT on every address\n    multicast_group: \"239.255.48.84\"  # the vendor's default group\n    interface_address: \"127.0.0.1\"  # the host's address on the sensor network (route to SENSOR_IP)\n    fpga_target_address: \"127.0.0.2:1234\"  # SENSOR_IP: the sensor's register port (push destination, clock, SDL)\n    stream_transport: \"unicast\"  # the sensor sends to this client only (the vendor's default)\n    observer_only: false  # this driver is the sensor's one primary client (it configures the sensor and its clock)\n    diagnostic_mode: false  # valid points only, as the vendor's default\n    timestamp_mode: 0  # TIME_MODE sensor: the sensor's frame time (TIME_FROM_SENSOR)\n    frame_id: \"voyant_sensor\"  # FRAME_ID\n"
 }
 --- stderr

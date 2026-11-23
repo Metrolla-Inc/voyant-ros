@@ -1,8 +1,8 @@
 exit: 1
 --- stdout
 --- stderr
-voyant-driver: refusing to start: LIDAR_MODEL is not set; accepted (any case, '_' or '-', optional 'voyant-' prefix): meadowlark, mdl, carbon-dev-kit, carbon-devkit
-voyant-driver: refusing to start: SENSOR_IP is not set; accepted: the sensor's own IPv4 address, for example 192.168.20.20 (the Meadowlark factory address)
+voyant-driver: refusing to start: LIDAR_MODEL is not set; accepted (any case, '_' or '-', optional 'voyant-' prefix): carbon
+voyant-driver: refusing to start: SENSOR_IP is not set; accepted: the sensor's own IPv4 address, for example 192.168.1.128
 voyant-driver: refusing to start: BINDING_ADDRESS is not a variable this image knows (did you mean DATA_PORT?); accepted: LIDAR_MODEL, SENSOR_IP, SENSOR_ID, DATA_PORT, DEVICE_PORT, HOST_IP, FRAME_ID, POINTCLOUD_TOPIC, TIME_MODE, PUBLISH_SCAN, VOYANT_RUN_DIR, DUAL_LIDAR
 voyant-driver: refusing to start: INTERFACE_ADDRESS is not a variable this image knows (did you mean HOST_IP?); accepted: LIDAR_MODEL, SENSOR_IP, SENSOR_ID, DATA_PORT, DEVICE_PORT, HOST_IP, FRAME_ID, POINTCLOUD_TOPIC, TIME_MODE, PUBLISH_SCAN, VOYANT_RUN_DIR, DUAL_LIDAR
 voyant-driver: refusing to start: LIDAR_IP is not a variable this image knows (did you mean SENSOR_IP?); accepted: LIDAR_MODEL, SENSOR_IP, SENSOR_ID, DATA_PORT, DEVICE_PORT, HOST_IP, FRAME_ID, POINTCLOUD_TOPIC, TIME_MODE, PUBLISH_SCAN, VOYANT_RUN_DIR, DUAL_LIDAR
