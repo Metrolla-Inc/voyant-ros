@@ -5,7 +5,7 @@
 // See the LICENSE file in the repository root for full license text.
 
 #include "voyant_ros/bin_to_mcap.hpp"
-#include <logging_utils.hpp>
+#include <cbindings/logging_utils_ffi.hpp>
 
 int main(int argc, char *argv[])
 {
@@ -23,8 +23,9 @@ int main(int argc, char *argv[])
   // Initialize LiDAR converter
   voyant_ros::Bin2Mcap converter(yaml_file_path);
 
-  // Create the playback instance
-  VoyantPlayback player;
+  // Create the playback instance: rate 0 converts as fast as possible;
+  // diagnostic_mode keeps any invalid returns the recording holds.
+  VoyantPlayback player(0.0, false, converter.config.diagnostic_mode);
   if(!player.isValid())
   {
     std::cerr << "Failed to create VoyantPlayback instance: " << player.getLastError() << std::endl;
@@ -56,7 +57,15 @@ int main(int argc, char *argv[])
   converter_options.input_serialization_format = converter.config.serialization_format;
   converter_options.output_serialization_format = converter.config.serialization_format;
 
-  writer->open(storage_options, converter_options);
+  try
+  {
+    writer->open(storage_options, converter_options);
+  }
+  catch(const std::exception &e)
+  {
+    std::cerr << "Failed to open the output bag: " << e.what() << std::endl;
+    return EXIT_FAILURE;
+  }
 
   rosbag2_storage::TopicMetadata topic_metadata;
   topic_metadata.name = converter.config.topic_name;
@@ -66,6 +75,8 @@ int main(int argc, char *argv[])
 
   writer->create_topic(topic_metadata);
 
+  bool wrote_device_metadata = false;
+
   // Read and process frames - timing and loopback is handled automatically
   while(player.nextFrame())
   {
@@ -74,21 +85,42 @@ int main(int argc, char *argv[])
     uint64_t timestamp = player.currentFrameTimestamp();
 
     // Access latest frame as a const reference
-    const VoyantFrameWrapper &frame = player.currentFrame();
+    const VoyantFrame &frame = player.currentFrame();
     sensor_msgs::msg::PointCloud2 cloud = converter.pointDatatoRosMsg(frame);
     std::cout << "Pointcloud Size: " << cloud.height * cloud.width << std::endl;
+
+    // One-shot device metadata, mirroring the live driver's latched publish --
+    // mcap_to_bin requires it when converting back to a recording.
+    if(!wrote_device_metadata)
+    {
+      voyant_ros::msg::VoyantDeviceMetadata metadata =
+          voyant_ros::deviceMetadataFromFrame(frame, converter.config);
+      metadata.header.stamp = cloud.header.stamp;
+      metadata.recording_api_version = player.apiVersion();
+      writer->write(metadata,
+                    voyant_ros::deviceMetadataTopicFor(converter.config.topic_name),
+                    rclcpp::Time(cloud.header.stamp));
+      wrote_device_metadata = true;
+    }
 
     rclcpp::Serialization<sensor_msgs::msg::PointCloud2> serializer;
     rclcpp::SerializedMessage serialized_msg;
     serializer.serialize_message(&cloud, &serialized_msg);
 
     auto bag_msg = std::make_shared<rosbag2_storage::SerializedBagMessage>();
-#if defined(ROS2_ROLLING) || defined(ROS2_JAZZY)
-    bag_msg->recv_timestamp = rclcpp::Time(cloud.header.stamp).nanoseconds();
-#else
+#if defined(ROS2_HUMBLE)
+    // rosbag2 renamed SerializedBagMessage::time_stamp -> recv_timestamp in
+    // Jazzy. Humble is the only supported distro still on the legacy field;
+    // everything else (Jazzy, Kilted, Lyrical, Rolling, and newer) uses
+    // recv_timestamp, so the #else branch is the forward-compatible default.
     bag_msg->time_stamp = rclcpp::Time(cloud.header.stamp).nanoseconds();
+#else
+    bag_msg->recv_timestamp = rclcpp::Time(cloud.header.stamp).nanoseconds();
 #endif
-    bag_msg->topic_name = "/point_cloud";
+    // Must match the topic created above (writer->create_topic), which uses the
+    // configured topic_name -- otherwise a non-default topic_name writes to a
+    // topic that was never created.
+    bag_msg->topic_name = converter.config.topic_name;
     bag_msg->serialized_data = std::make_shared<rcutils_uint8_array_t>();
 
     rcutils_allocator_t allocator = rcutils_get_default_allocator();

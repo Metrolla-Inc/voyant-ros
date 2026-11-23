@@ -8,3 +8,10 @@ log
 # Python test caches
 __pycache__/
 .pytest_cache/
+
+# bloom-generate outputs
+/debian/
+/.obj-*/
+
+# conversion test output
+*.vynt
