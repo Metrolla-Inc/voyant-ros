@@ -4,8 +4,11 @@
 > `METROLLA_DRIVER_CONTRACT=1` (docs/METROLLA_DRIVER_CONTRACT.md); without it the image behaves as
 > the vendor's driver. Based on the vendor's v1.0.1 with voyant-api 1.0.1, for the Voyant
 > **Carbon** (firmware FPGA v1.5.6 / MCU v4.1.0); the Carbon Dev Kit (Meadowlark) is no longer a
-> target (docs/VENDOR_DIFF.md). Image tags: `v<vendor version>-metrolla.<n>`, e.g.
-> `v1.0.1-metrolla.1`. Tests: TESTING.md.
+> target (docs/VENDOR_DIFF.md). Metrolla adds the node parameter `fpga_target_address` (the
+> sensor's register port, default voyant-api's `192.168.1.128:1234`; the vendor's node always used
+> that default). Image tags: `v<vendor version>-metrolla.<n>`, e.g. `v1.0.1-metrolla.1`. voyant-api
+> is proprietary (binary only); the image carries it with Voyant's written consent. Tests:
+> TESTING.md.
 
 [![CI](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml/badge.svg?branch=main)](https://github.com/Voyant-Photonics/voyant-ros/actions/workflows/docker-image.yml)
 ![ROS 2](https://img.shields.io/badge/ROS%202-Humble%20%7C%20Jazzy%20%7C%20Kilted%20%7C%20Lyrical-blue)

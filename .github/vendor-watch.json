@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "recorded": "2026-11-22",
+  "recorded": "2026-11-23",
   "vendors": [
     {
       "id": "voyant-ros",
@@ -11,8 +11,8 @@
       ],
       "fork_ref": "main",
       "base": {
-        "commit": "0d16e0a81d446fba79ea45965d686964eced0986",
-        "how": "merge-base of fork main and vendor main on 2026-11-21 (the fork's last vendor merge, b074d97 on 2026-05-06, brought in vendor 0d16e0a); kept on 2026-11-22 (D3 part C): the vendor update is planned, not taken (docs/VENDOR_UPDATE_PLAN.md)"
+        "commit": "ef121af1cc5aef7acd736a4359ee13918735136a",
+        "how": "the vendor's v1.0.1 tag, merged into the fork on 2026-11-23 (the Carbon update, docs/VENDOR_DIFF.md); before that 0d16e0a (the fork's 2026-05-06 merge)"
       }
     },
     {
@@ -23,8 +23,8 @@
         "v*"
       ],
       "base": {
-        "commit": "1c3d350a8847014bd059c2722b8b7d807eaef69d",
-        "how": "the vendor's v0.4.4 tag: the image installs the voyant-api 0.4.4 packages released with it (Dockerfile VOYANT_API_VERSION and VOYANT_API_SHA256, pinned 2026-11-22; before that the image took the latest release unpinned)"
+        "commit": "b8bf9743fbc2e18a1c1866aabaa50eccda442743",
+        "how": "the vendor's v1.0.1 tag: the image installs the voyant-api 1.0.1 packages released with it (Dockerfile VOYANT_API_VERSION and VOYANT_API_SHA256, pinned 2026-11-23; before that 0.4.4 = v0.4.4 1c3d350)"
       }
     }
   ],
