@@ -66,6 +66,10 @@ void VoyantSensorDriver::getParams()
   this->declare_parameter<std::string>("binding_address", "0.0.0.0:5678");
   this->declare_parameter<std::string>("multicast_group", "239.255.48.84");
   this->declare_parameter<std::string>("interface_address", "192.168.1.100");
+  // The sensor's register port (SDL, time sync, push destination); voyant-api's own default
+  // when unset. The vendor's node never set it, so it could only drive a Carbon at that address
+  // (Metrolla).
+  this->declare_parameter<std::string>("fpga_target_address", "192.168.1.128:1234");
   this->declare_parameter<std::string>("stream_transport", "unicast");
   this->declare_parameter<bool>("observer_only", false);
   this->declare_parameter<bool>("diagnostic_mode", false);
@@ -75,6 +79,7 @@ void VoyantSensorDriver::getParams()
   config_.binding_address = this->get_parameter("binding_address").as_string();
   config_.multicast_group = this->get_parameter("multicast_group").as_string();
   config_.interface_address = this->get_parameter("interface_address").as_string();
+  config_.fpga_target_address = this->get_parameter("fpga_target_address").as_string();
   config_.stream_transport = this->get_parameter("stream_transport").as_string();
   config_.observer_only = this->get_parameter("observer_only").as_bool();
   config_.diagnostic_mode = this->get_parameter("diagnostic_mode").as_bool();
@@ -91,12 +96,16 @@ void VoyantSensorDriver::initialize()
   // Try to connect to the sensor
   try
   {
-    RCLCPP_INFO(get_logger(), "[+] Connecting to sensor: %s", config_.binding_address.c_str());
+    RCLCPP_INFO(get_logger(),
+                "[+] Connecting to sensor: %s (receiving on %s)",
+                config_.fpga_target_address.c_str(),
+                config_.binding_address.c_str());
 
     CarbonConfig carbon_cfg;
     carbon_cfg.setBindAddr(config_.binding_address)
         .setGroupAddr(config_.multicast_group)
         .setInterfaceAddr(config_.interface_address)
+        .setFpgaTargetAddr(config_.fpga_target_address)
         .setStreamTransport(parseStreamTransport(config_.stream_transport, get_logger()))
         .setObserverOnly(config_.observer_only)
         .setDiagnosticMode(config_.diagnostic_mode);

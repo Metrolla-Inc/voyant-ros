@@ -33,6 +33,7 @@ struct SensorParams
   std::string binding_address;
   std::string multicast_group;
   std::string interface_address;
+  std::string fpga_target_address; // the sensor's register port, ip:port (Metrolla)
   std::string stream_transport;
   bool observer_only = false;
 };
