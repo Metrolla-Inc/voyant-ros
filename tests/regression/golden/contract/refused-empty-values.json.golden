@@ -2,14 +2,14 @@ exit: 1
 --- stdout
 {
   "refused": [
-    "SENSOR_IP is set but empty; accepted: the sensor's own IPv4 address, for example 192.168.20.20",
+    "SENSOR_IP is set but empty; accepted: the sensor's own IPv4 address, for example 192.168.1.128",
     "SENSOR_ID is set but empty; accepted: a lowercase letter then up to 30 lowercase letters, digits or single '_', or unset it for the default",
-    "DATA_PORT is set but empty; accepted: a UDP port 1024-65535 (default 4444), or unset it for the default",
+    "DATA_PORT is set but empty; accepted: a UDP port 1024-65535 (default 5678), or unset it for the default",
     "FRAME_ID is set but empty; accepted: letters, digits and '_', not starting with a digit (default voyant_sensor), or unset it for the default"
   ]
 }
 --- stderr
-voyant-driver: refusing to start: SENSOR_IP is set but empty; accepted: the sensor's own IPv4 address, for example 192.168.20.20
+voyant-driver: refusing to start: SENSOR_IP is set but empty; accepted: the sensor's own IPv4 address, for example 192.168.1.128
 voyant-driver: refusing to start: SENSOR_ID is set but empty; accepted: a lowercase letter then up to 30 lowercase letters, digits or single '_', or unset it for the default
-voyant-driver: refusing to start: DATA_PORT is set but empty; accepted: a UDP port 1024-65535 (default 4444), or unset it for the default
+voyant-driver: refusing to start: DATA_PORT is set but empty; accepted: a UDP port 1024-65535 (default 5678), or unset it for the default
 voyant-driver: refusing to start: FRAME_ID is set but empty; accepted: letters, digits and '_', not starting with a digit (default voyant_sensor), or unset it for the default

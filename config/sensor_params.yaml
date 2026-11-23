@@ -6,38 +6,33 @@
 /**:
   ros__parameters:
     ## Live node parameters
-    # These are the standard parameters for local testing in loopback mode:
-    # - "0.0.0.0:4444": Local binding address and port
-    # - "224.0.0.0": Multicast group address
-    # - "127.0.0.1": Interface address (localhost/loopback)
+    # Defaults target a Carbon sensor on a local network:
+    # - "0.0.0.0:5678": Local binding address and port (Carbon default)
+    # - "239.255.48.84": Multicast group the receiver joins (the sensor replies via unicast by default)
+    # - "192.168.1.100": Host network interface IP on the sensor's subnet
     #
-    # When connecting to an actual sensor
-    #  - "0.0.0.0:4444": Binds to all interfaces on port 4444
-    #  - "224.0.0.0": Standard multicast group address for the sensor
-    #  - "192.168.20.100": Your network interface's IP address
-    binding_address: '0.0.0.0:4444'
-    multicast_group: '224.0.0.0'
-    interface_address: '127.0.0.1'
+    # For loopback testing against the Carbon simulator, set interface_address
+    # to "127.0.0.1".
+    binding_address: '0.0.0.0:5678'
+    multicast_group: '239.255.48.84'
+    interface_address: '192.168.1.100'
+    # How the sensor delivers its push stream:
+    # - "unicast" (default): the sensor replies only to this client; robust even on a multi-homed host
+    # - "multicast": the sensor streams to the group above so other clients can share the sensor
+    stream_transport: 'unicast'
+    # Observer-only mode: passively receive the stream without driving the sensor (no SDL, time-sync,
+    # or comms-health). Set true when another (primary) client already owns the sensor; that primary
+    # must use "multicast" so this node can receive the shared stream. Exactly one primary per sensor.
+    observer_only: false
 
-    ## Shared parameters
-    # Point format selection
-    # - 0 = UNKNOWN (will throw error)
-    # - 1 = MDL_STANDARD (recommended) - x,y,z,v,snr,drop_reason,timestamp,index
-    # - 2 = MDL_EXTENDED - adds calibrated_reflectance, noise_mean_estimate, min_ramp_snr, frame_index
-    point_format: 1
-
+    ## Output parameters
     # timestamp_mode[optional]
     # - 0 = TIME_FROM_SENSOR
     # - 1 = TIME_FROM_ROS
     timestamp_mode: 0
 
-    # Enable Single Point Noise filter (+ other filtering of invalid points)
-    valid_only_filter: false
+    # Include invalid returns (with their drop_reason) instead of valid points only:
+    # runs the client in diagnostic mode.
+    diagnostic_mode: false
 
-    ## The below params are shared with the bin_to_mcap conversion
-    frame_id: 'voyant_sensor'
-    bin_input: '' # Path to your bin file
-    mcap_output: '' # Desired output path
-    storage_id: 'mcap' # sqlite3/mcap
-    serialization_format: 'cdr'
-    topic_name: '/point_cloud' # Changing this will break the foxglove multi colormap visualization,
+    frame_id: 'voyant_sensor' # frame_id stamped on every published cloud

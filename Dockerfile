@@ -40,32 +40,17 @@ RUN if [ "$RMW_IMPLEMENTATION_ARG" = "rmw_cyclonedds_cpp" ]; then \
     rm -rf /var/lib/apt/lists/*; \
     fi
 
-# Install Cap'n Proto from source used by Voyant API
-# (checksum recorded 2026-11-22; the download was not checked before)
-ARG CAPNP_SHA256=07167580e563f5e821e3b2af1c238c16ec7181612650c5901330fa9a0da50939
-WORKDIR /tmp
-RUN curl -fsSLO https://capnproto.org/capnproto-c++-1.1.0.tar.gz && \
-    echo "${CAPNP_SHA256}  capnproto-c++-1.1.0.tar.gz" > capnp.sha256 && sha256sum -c capnp.sha256 && \
-    tar zxf capnproto-c++-1.1.0.tar.gz && \
-    cd capnproto-c++-1.1.0 && \
-    ./configure && \
-    make -j6 && \
-    make install && \
-    ldconfig && \
-    cd .. && \
-    rm -rf capnproto-c++-1.1.0* capnp.sha256
-
 # Set working directory
 WORKDIR /workspace
 
-# Download and install the voyant-api release packages from GitHub, pinned: this driver is written
-# against voyant-api 0.4.4 (the vendor commit this fork is based on, 0d16e0a, "Update dockerfile
-# for v0.4.4 voyant-api release"). The image used to take whatever release was latest: every build
-# of this fork since May 2026 failed (on 21 Nov because voyant-api 1.0.1 no longer ships
-# voyant_frame_wrapper.hpp). Updating is the vendor update in docs/VENDOR_UPDATE_PLAN.md.
-# voyant-api is proprietary (binary only; see that file).
-ARG VOYANT_API_VERSION=0.4.4
-ARG VOYANT_API_SHA256=1c2b69f7e170a0299d1f0293cff2f6f8bbd3a1897f518d8960dee3dfa1f548dd
+# Download and install the voyant-api release packages from GitHub, pinned: this driver is the
+# vendor's voyant-ros v1.0.1, written against voyant-api 1.0.1 (CarbonClient; Carbon firmware
+# FPGA v1.5.6 / MCU v4.1.0). The vendor's Dockerfile takes whatever release is latest; pinned here
+# by version and sha256 so a build is the same on any day (docs/VENDOR_DIFF.md). voyant-api is
+# proprietary (binary only), redistributed with Voyant's written consent (owner, 22 Nov 2026).
+# Cap'n Proto is no longer built from source: voyant-api 1.0 does not need it (vendor fef04f0).
+ARG VOYANT_API_VERSION=1.0.1
+ARG VOYANT_API_SHA256=8058990f10d66670ea2aca3e4f34c132cdc66a34c4e755ec2d04685a0379ebd0
 RUN ARCH=$(dpkg --print-architecture) && \
     TARBALL_URL="https://github.com/Voyant-Photonics/voyant-sdk/releases/download/v${VOYANT_API_VERSION}/voyant-api-debian-v${VOYANT_API_VERSION}.tar.gz" && \
     wget -O /tmp/voyant-api.tar.gz "$TARBALL_URL" && \

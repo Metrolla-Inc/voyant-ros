@@ -12,12 +12,12 @@ import yaml
 import voyant_env as v
 from contract_run import REPO, run
 
-BASE = {"LIDAR_MODEL": "meadowlark", "SENSOR_IP": "192.168.20.20", "HOST_IP": "192.168.20.100"}
+BASE = {"LIDAR_MODEL": "carbon", "SENSOR_IP": "192.168.1.128", "HOST_IP": "192.168.1.100"}
 
 
 def fake_route(sensor_ip: str, port: int) -> str:
-    if sensor_ip.startswith("192.168.20."):
-        return "192.168.20.100"
+    if sensor_ip.startswith("192.168.1."):
+        return "192.168.1.100"
     raise OSError(101, "Network is unreachable")
 
 
@@ -41,37 +41,44 @@ def refused(**changes) -> list[str]:
 
 def test_minimal_defaults():
     s = parse()
-    assert s.model.key == "meadowlark"
-    assert (s.sensor_ip, s.data_port, s.interface_address) == ("192.168.20.20", 4444, "192.168.20.100")
+    assert s.model.key == "carbon"
+    assert (s.sensor_ip, s.data_port, s.interface_address) == ("192.168.1.128", 5678, "192.168.1.100")
     assert s.interface_from == "HOST_IP"
     assert (s.frame_id, s.topic, s.resolved_topic) == ("voyant_sensor", "point_cloud", "/point_cloud")
-    assert (s.time_mode, s.run_dir, s.params_path) == ("host", "/tmp/voyant", "/tmp/voyant/params.yaml")
+    assert (s.time_mode, s.run_dir, s.params_path) == ("sensor", "/tmp/voyant", "/tmp/voyant/params.yaml")
     assert s.sensor_id is None and s.namespace == "/"
 
 
-@pytest.mark.parametrize("name", ["meadowlark", "Meadowlark", "MEADOWLARK", "voyant-meadowlark",
-                                  "Voyant_Meadowlark", "mdl", "MDL", "carbon-dev-kit",
-                                  "Carbon Dev Kit", "carbon_devkit", "voyant-mdl", " meadowlark "])
+@pytest.mark.parametrize("name", ["carbon", "Carbon", "CARBON", "voyant-carbon", "Voyant_Carbon",
+                                  "VOYANT CARBON", " carbon "])
 def test_model_spellings(name):
-    assert parse(LIDAR_MODEL=name).model.key == "meadowlark"
+    """The Voyant Carbon is the target (owner, 22 Nov 2026); metrolla-edge's model is
+    voyant-carbon."""
+    assert parse(LIDAR_MODEL=name).model.key == "carbon"
 
 
-@pytest.mark.parametrize("name", ["carbon", "Carbon", "voyant-carbon", "VOYANT_CARBON"])
-def test_carbon_refused_with_the_plan(name):
+@pytest.mark.parametrize("name", ["meadowlark", "Meadowlark", "voyant-meadowlark", "mdl", "MDL",
+                                  "carbon-dev-kit", "Carbon Dev Kit", "carbon_devkit",
+                                  "voyant-carbon-dev-kit", "voyant-mdl", "dev-kit", "devkit"])
+def test_dev_kit_refused_with_the_reason(name):
     (problem,) = refused(LIDAR_MODEL=name)
-    assert "voyant-api 0.5 or later" in problem and "VENDOR_UPDATE_PLAN" in problem
+    assert problem.startswith(f"LIDAR_MODEL='{name}' is not supported by this image: the Carbon "
+                              "Dev Kit (Meadowlark) is not a target")
+    assert "voyant-api 1.0.1" in problem and "VENDOR_DIFF" in problem
+    assert problem.endswith("; accepted: carbon")
 
 
-@pytest.mark.parametrize("name", ["os1", "rshelios", "voyant", "meadow", "mdl-012", "x"])
+@pytest.mark.parametrize("name", ["os1", "rshelios", "voyant", "meadow", "mdl-012", "carbon2",
+                                  "carbon-sim", "x"])
 def test_unknown_model(name):
     (problem,) = refused(LIDAR_MODEL=name)
     assert "is not a Voyant model this image knows" in problem
-    assert "meadowlark, mdl, carbon-dev-kit, carbon-devkit" in problem
+    assert problem.endswith("optional 'voyant-' prefix): carbon")
 
 
 def test_host_ip_from_the_route_when_unset():
     s = parse(HOST_IP=None)
-    assert (s.interface_address, s.interface_from) == ("192.168.20.100", "route to SENSOR_IP")
+    assert (s.interface_address, s.interface_from) == ("192.168.1.100", "route to SENSOR_IP")
     assert s.host_ip is None
 
 
@@ -88,30 +95,30 @@ def test_route_is_not_looked_up_when_something_else_is_wrong():
         calls.append(ip)
         return "1.1.1.1"
     with pytest.raises(v.Refused):
-        v.parse({"LIDAR_MODEL": "meadowlark", "SENSOR_IP": "192.168.20.20", "FRAME_ID": "1x"},
+        v.parse({"LIDAR_MODEL": "carbon", "SENSOR_IP": "192.168.1.128", "FRAME_ID": "1x"},
                 route=route)
     assert calls == []
 
 
 def test_real_route_to_loopback():
-    s = v.parse({"LIDAR_MODEL": "meadowlark", "SENSOR_IP": "127.0.0.2"})
+    s = v.parse({"LIDAR_MODEL": "carbon", "SENSOR_IP": "127.0.0.2"})
     assert s.interface_address == "127.0.0.1"
 
 
-@pytest.mark.parametrize("value,addr", [("192.168.20.100", "192.168.20.100"),
-                                        ("192.168.20.100/24", "192.168.20.100"),
-                                        ("192.168.20.101/16", "192.168.20.101")])
+@pytest.mark.parametrize("value,addr", [("192.168.1.100", "192.168.1.100"),
+                                        ("192.168.1.100/24", "192.168.1.100"),
+                                        ("192.168.1.101/16", "192.168.1.101")])
 def test_host_ip_forms(value, addr):
     s = parse(HOST_IP=value)
     assert (s.interface_address, s.host_ip) == (addr, value)
 
 
 @pytest.mark.parametrize("value,text", [
-    ("192.168.20.100/33", "has no usable prefix length"),
-    ("192.168.20.100/0", "has no usable prefix length"),
-    ("192.168.20.100/", "has no usable prefix length"),
+    ("192.168.1.100/33", "has no usable prefix length"),
+    ("192.168.1.100/0", "has no usable prefix length"),
+    ("192.168.1.100/", "has no usable prefix length"),
     ("eth0", "is not an IPv4 address"),
-    ("192.168.20.20", "is the sensor's own address"),
+    ("192.168.1.128", "is the sensor's own address"),
     ("192.168.30.1/24", "is not in the host's subnet 192.168.30.0/24"),
     ("0.0.0.0", "is not a unicast address"),
     ("224.0.0.1", "is not a unicast address"),
@@ -121,7 +128,7 @@ def test_host_ip_refused(value, text):
     assert text in problem and problem.startswith("HOST_IP=")
 
 
-@pytest.mark.parametrize("value", ["192.168.20.020", "192.168.20", "300.1.1.1", "fe80::1",
+@pytest.mark.parametrize("value", ["192.168.1.028", "192.168.1", "300.1.1.1", "fe80::1",
                                    "sensor.local", "0.0.0.0", "239.255.48.84",
                                    "255.255.255.255", "240.0.0.1"])
 def test_sensor_ip_refused(value):
@@ -129,7 +136,7 @@ def test_sensor_ip_refused(value):
     assert problem.startswith(f"SENSOR_IP='{value}' is not")
 
 
-@pytest.mark.parametrize("value", ["1024", "4444", "65535", "7502"])
+@pytest.mark.parametrize("value", ["1024", "4444", "5678", "65535", "7502"])
 def test_data_port(value):
     assert parse(DATA_PORT=value).data_port == int(value)
 
@@ -140,10 +147,11 @@ def test_data_port_refused(value):
     assert problem.startswith(f"DATA_PORT='{value}' is not a usable UDP port")
 
 
-@pytest.mark.parametrize("value", ["8080", "80", "4445", ""])
+@pytest.mark.parametrize("value", ["1234", "8080", "80", "4445", ""])
 def test_device_port_refused(value):
     (problem,) = refused(DEVICE_PORT=value)
     assert problem.startswith(f"DEVICE_PORT='{value}' is not supported by this image")
+    assert "register port 1234" in problem
 
 
 @pytest.mark.parametrize("value", ["east", "a", "lidar_2", "a" * 31])
@@ -183,15 +191,27 @@ def test_topic_refused(value):
     assert "is not a ROS topic name" in problem
 
 
-@pytest.mark.parametrize("value", ["host", "HOST", "Host"])
-def test_time_mode_host(value):
-    assert parse(TIME_MODE=value).time_mode == "host"
+@pytest.mark.parametrize("value,mode,param", [("host", "host", 1), ("HOST", "host", 1),
+                                              ("Host", "host", 1), ("sensor", "sensor", 0),
+                                              ("SENSOR", "sensor", 0)])
+def test_time_mode(value, mode, param):
+    s = parse(TIME_MODE=value)
+    assert s.time_mode == mode
+    assert v.describe(s)["parameters"]["timestamp_mode"] == param
 
 
-@pytest.mark.parametrize("value", ["sensor", "gps", "ptp", "ntp", "PTP"])
-def test_time_mode_sensor_clock_refused(value):
+def test_time_mode_default_is_the_sensor_clock():
+    """voyant-api 1.0 stamps frames with the sensor's clock, which the primary client disciplines
+    to the host's (TIME_FROM_SENSOR, the vendor's default)."""
+    s = parse()
+    assert s.time_mode == "sensor" and v.describe(s)["parameters"]["timestamp_mode"] == 0
+
+
+@pytest.mark.parametrize("value", ["gps", "ptp", "ntp", "PTP"])
+def test_time_mode_other_clocks_refused(value):
     (problem,) = refused(TIME_MODE=value)
-    assert "is not supported by this image" in problem and "host's clock" in problem
+    assert "is not supported by this image" in problem
+    assert "disciplines the sensor's clock to the host's" in problem
 
 
 def test_time_mode_unknown():
@@ -295,9 +315,19 @@ def test_render_parses_and_holds_the_contract():
     s = parse(SENSOR_ID="east", FRAME_ID="east_lidar", DATA_PORT="4500")
     doc = yaml.safe_load(v.render(s))
     assert doc == {"/**": {"ros__parameters": {
-        "binding_address": "0.0.0.0:4500", "multicast_group": "224.0.0.0",
-        "interface_address": "192.168.20.100", "spn_filter": True, "timestamp_mode": 0,
-        "frame_id": "east_lidar", "point_format": 1}}}
+        "binding_address": "0.0.0.0:4500", "multicast_group": "239.255.48.84",
+        "interface_address": "192.168.1.100", "fpga_target_address": "192.168.1.128:1234",
+        "stream_transport": "unicast", "observer_only": False, "diagnostic_mode": False,
+        "timestamp_mode": 0, "frame_id": "east_lidar"}}}
+
+
+def test_sensor_ip_is_the_clients_sensor_address():
+    """SENSOR_IP reaches the client (fpga_target_address, the sensor's register port): the
+    vendor's node never set it, so voyant-api's default 192.168.1.128:1234 was the only sensor
+    it could drive (push destination, clock, SDL)."""
+    s = parse(SENSOR_IP="10.0.0.7", HOST_IP="10.0.0.1/24")
+    assert v.describe(s)["parameters"]["fpga_target_address"] == "10.0.0.7:1234"
+    assert 'fpga_target_address: "10.0.0.7:1234"' in v.render(s)
 
 
 @pytest.mark.parametrize("frame", ["true", "null", "yes", "No"])
@@ -317,7 +347,9 @@ def test_node_argv():
 def test_describe():
     d = v.describe(parse(SENSOR_ID="east"))
     assert d["topic"] == "/east/point_cloud" and d["metadata_topic"] == "/east/device_metadata"
-    assert d["parameters"]["binding_address"] == "0.0.0.0:4444"
+    assert d["parameters"]["binding_address"] == "0.0.0.0:5678"
+    assert d["sensor_register_address"] == "192.168.1.128:1234"
+    assert d["multicast_group"] == "239.255.48.84"
     assert d["sources"]["LIDAR_MODEL"] == "env" and d["sources"]["FRAME_ID"] == "default"
 
 
@@ -330,15 +362,16 @@ def driver_source() -> str:
 def test_contract_matches_the_driver_source():
     assert v.declared_parameters(driver_source()) == {
         "binding_address": "string", "multicast_group": "string", "interface_address": "string",
-        "spn_filter": "bool", "timestamp_mode": "int", "frame_id": "string", "point_format": "int"}
+        "fpga_target_address": "string", "stream_transport": "string", "observer_only": "bool",
+        "diagnostic_mode": "bool", "timestamp_mode": "int", "frame_id": "string"}
     assert v.contract_problems(driver_source()) == []
 
 
 def test_contract_problems_on_a_renamed_parameter():
-    source = driver_source().replace('"spn_filter"', '"valid_only_filter"')
+    source = driver_source().replace('"diagnostic_mode"', '"keep_invalid_points"')
     problems = v.contract_problems(source)
-    assert "the node declares spn_filter as None, the contract sets a bool" in problems
-    assert "the node declares valid_only_filter, which the contract does not set" in problems
+    assert "the node declares diagnostic_mode as None, the contract sets a bool" in problems
+    assert "the node declares keep_invalid_points, which the contract does not set" in problems
 
 
 def test_contract_problems_on_a_renamed_topic():
@@ -349,18 +382,19 @@ def test_contract_problems_on_a_renamed_topic():
 # ---- commands --------------------------------------------------------------------------------
 
 def test_check_text():
-    code, out, err = run(["check"], {"LIDAR_MODEL": "mdl", "SENSOR_IP": "127.0.0.2"})
+    code, out, err = run(["check"], {"LIDAR_MODEL": "voyant-carbon", "SENSOR_IP": "127.0.0.2"})
     assert code == 0 and err == ""
     assert out.endswith("# exec: /ros2_ws/install/voyant_ros/lib/voyant_ros/voyant_sensor_node "
                         "--ros-args -r point_cloud:=point_cloud --params-file /tmp/voyant/params.yaml\n")
     assert 'interface_address: "127.0.0.1"' in out
+    assert 'fpga_target_address: "127.0.0.2:1234"' in out
 
 
 def test_check_json():
     code, out, err = run(["check", "--json"], dict(BASE))
     doc = json.loads(out)
-    assert code == 0 and doc["interface_address"] == "192.168.20.100"
-    assert yaml.safe_load(doc["params_yaml"])["/**"]["ros__parameters"]["point_format"] == 1
+    assert code == 0 and doc["interface_address"] == "192.168.1.100"
+    assert yaml.safe_load(doc["params_yaml"])["/**"]["ros__parameters"]["observer_only"] is False
 
 
 def test_check_refused_json():
@@ -391,7 +425,7 @@ def test_run_writes_the_file_and_execs(monkeypatch, tmp_path):
     assert (tmp_path / "run" / "params.yaml").read_text() == v.render(v.parse(env, route=fake_route))
     assert child_env["ROS_LOG_DIR"] == str(tmp_path / "ros" / "log")
     assert (tmp_path / "ros" / "log").is_dir()
-    assert err.startswith("voyant-driver: Voyant Carbon Dev Kit (Meadowlark")
+    assert err.startswith("voyant-driver: Voyant Carbon (voyant-api 1.0.1")
 
 
 def test_run_default_log_dir(monkeypatch):

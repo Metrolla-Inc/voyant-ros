@@ -3,6 +3,8 @@
 // This example code is licensed under the MIT License.
 // See the LICENSE file in the repository root for full license text.
 
+#pragma once
+
 #include <string>
 
 namespace voyant_ros
@@ -15,13 +17,6 @@ enum class TimestampMode
   TIME_FROM_ROS = 1,
 };
 
-enum class PointFormat
-{
-  UNKNOWN = 0,
-  MDL_STANDARD = 1,
-  MDL_EXTENDED = 2,
-};
-
 /**
  * @brief Sensor configuration parameters
  */
@@ -31,34 +26,16 @@ struct SensorParams
   std::string bin_input;
   std::string lidar_frame_id;
   int timestamp_mode;
-  bool valid_only_filter;
+  bool diagnostic_mode = false;
   std::string storage_id;
   std::string serialization_format;
   std::string topic_name;
   std::string binding_address;
   std::string multicast_group;
   std::string interface_address;
-  PointFormat point_format = PointFormat::UNKNOWN;
+  std::string fpga_target_address; // the sensor's register port, ip:port (Metrolla)
+  std::string stream_transport;
+  bool observer_only = false;
 };
-
-/**
- * @brief Convert PointFormat enum to string representation
- * @param format The point format enum value
- * @return String representation of the format
- */
-inline std::string pointFormatToString(PointFormat format)
-{
-  switch(format)
-  {
-    case PointFormat::MDL_STANDARD:
-      return "MDL_STANDARD";
-    case PointFormat::MDL_EXTENDED:
-      return "MDL_EXTENDED";
-    case PointFormat::UNKNOWN:
-      return "UNKNOWN";
-    default:
-      return "INVALID(" + std::to_string(static_cast<int>(format)) + ")";
-  }
-}
 
 } // namespace voyant_ros

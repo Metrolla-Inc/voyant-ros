@@ -41,8 +41,12 @@ DRIVER_SOURCE = WORKSPACE + "/src/voyant-ros/src/sensor_driver.cpp"
 DEFAULT_RUN_DIR = "/tmp/voyant"
 DEFAULT_ROS_HOME = "/tmp/ros"
 
-DEFAULT_DATA_PORT = 4444  # the Meadowlark stream's port (vendor config/sensor_params.yaml)
-MULTICAST_GROUP = "224.0.0.0"  # the Meadowlark stream's multicast group (vendor config)
+DEFAULT_DATA_PORT = 5678  # the Carbon client's port (vendor config/sensor_params.yaml, v1.0.1)
+MULTICAST_GROUP = "239.255.48.84"  # the Carbon client's multicast group (vendor config, v1.0.1)
+# The sensor's register port: the primary client writes the push destination, the SDL settings
+# and the clock discipline there (voyant-api 1.0.1's default fpga_target_addr is
+# 192.168.1.128:1234; the port is the sensor's, not a setting).
+SENSOR_REGISTER_PORT = 1234
 MIN_PORT = 1024  # the driver runs as a non-root uid with no capability: no port below 1024
 MAX_PORT = 65535
 DEFAULT_FRAME_ID = "voyant_sensor"  # the vendor config's frame_id (what the legacy image uses)
@@ -54,10 +58,10 @@ FALSE_WORDS = ("0", "false", "no", "off")
 
 
 # --------------------------------------------------------------------------------------------
-# Models. The image is built with voyant-api 0.4.4 (Dockerfile VOYANT_API_VERSION), whose
-# VoyantClient receives the Meadowlark point stream: Voyant's Carbon Dev Kit. Voyant's production
-# Carbon sensors need voyant-api 0.5 or later (CarbonClient), i.e. the vendor update in
-# docs/VENDOR_UPDATE_PLAN.md.
+# Models. The image is the vendor's voyant-ros v1.0.1 built with voyant-api 1.0.1 (Dockerfile
+# VOYANT_API_VERSION), whose CarbonClient drives a Voyant Carbon with firmware FPGA v1.5.6 /
+# MCU v4.1.0 (older firmware is not compatible). The Carbon is Metrolla's target (owner,
+# 22 Nov 2026); the Carbon Dev Kit (Meadowlark) is not: voyant-api 1.0 no longer receives it.
 # --------------------------------------------------------------------------------------------
 
 
@@ -69,16 +73,15 @@ class Model:
 
 
 MODELS_LIST = (
-    Model("meadowlark", "Voyant Carbon Dev Kit (Meadowlark, device id MDL-nnn)",
-          ("meadowlark", "mdl", "carbon-dev-kit", "carbon-devkit")),
+    Model("carbon", "Voyant Carbon (voyant-api 1.0.1, firmware FPGA v1.5.6 / MCU v4.1.0)",
+          ("carbon",)),
 )
 MODELS = {name: m for m in MODELS_LIST for name in m.names}
 # Names that are Voyant products this image cannot receive, with why.
-NOT_THIS_IMAGE = {
-    "carbon": "Voyant Carbon sensors need voyant-api 0.5 or later (CarbonClient); this image is "
-              "built with voyant-api 0.4.4, which receives the Carbon Dev Kit (Meadowlark) stream "
-              "only (docs/VENDOR_UPDATE_PLAN.md)",
-}
+_DEV_KIT = ("the Carbon Dev Kit (Meadowlark) is not a target: voyant-api 1.0.1, which this image "
+            "is built with for the Voyant Carbon, no longer receives it (docs/VENDOR_DIFF.md)")
+NOT_THIS_IMAGE = {name: _DEV_KIT for name in ("meadowlark", "mdl", "carbon-dev-kit",
+                                              "carbon-devkit", "dev-kit", "devkit")}
 
 
 def normalise_model(value: str) -> str:
@@ -123,14 +126,16 @@ STRICT_PREFIXES = ("VOYANT_", "LIDAR_", "SENSOR_", "DATA_", "DEVICE_", "HOST_", 
 
 ACCEPTED = {
     "LIDAR_MODEL": f"a Voyant model this image receives: {model_list()}",
-    "SENSOR_IP": "the sensor's own IPv4 address, for example 192.168.20.20",
+    "SENSOR_IP": "the sensor's own IPv4 address, for example 192.168.1.128",
     "SENSOR_ID": "a lowercase letter then up to 30 lowercase letters, digits or single '_'",
     "DATA_PORT": f"a UDP port {MIN_PORT}-{MAX_PORT} (default {DEFAULT_DATA_PORT})",
-    "DEVICE_PORT": "unset: this driver only receives the sensor's stream and has no device port",
+    "DEVICE_PORT": "unset: the client talks to the sensor's register port "
+                   f"{SENSOR_REGISTER_PORT}, which is the sensor's, not a setting",
     "HOST_IP": "the host's IPv4 address on the sensor network, optionally with /1-/32",
     "FRAME_ID": f"letters, digits and '_', not starting with a digit (default {DEFAULT_FRAME_ID})",
     "POINTCLOUD_TOPIC": f"a ROS topic name (default {DEFAULT_TOPIC})",
-    "TIME_MODE": "host (the default and only mode of this image)",
+    "TIME_MODE": "sensor (the default: the sensor's frame time, its clock disciplined to the "
+                 "host's) or host (the host's clock when the node publishes)",
     "PUBLISH_SCAN": "a false value (0, false, no, off): this driver has no laser scan output",
     "VOYANT_RUN_DIR": f"an absolute directory path (default {DEFAULT_RUN_DIR})",
 }
@@ -198,7 +203,7 @@ def shown(value: str) -> str:
 def _ipv4(name: str, value: str, problems: list[str], what: str) -> ipaddress.IPv4Address | None:
     if not _IPV4_RE.fullmatch(value):
         problems.append(f"{name}={shown(value)} is not an IPv4 address; accepted: {what} in dotted "
-                        "decimal without leading zeros, for example 192.168.20.20")
+                        "decimal without leading zeros, for example 192.168.1.20")
         return None
     address = ipaddress.IPv4Address(value)
     if address.is_unspecified or address.is_multicast or address.is_reserved or \
@@ -274,7 +279,7 @@ def parse(env: Mapping[str, str],
     sensor = None
     if "SENSOR_IP" not in env:
         problems.append("SENSOR_IP is not set; accepted: the sensor's own IPv4 address, for example "
-                        "192.168.20.20 (the Meadowlark factory address)")
+                        "192.168.1.128")
     elif "SENSOR_IP" in present:
         sensor = _ipv4("SENSOR_IP", present["SENSOR_IP"], problems, "the sensor's own IPv4 address")
     get("SENSOR_IP")
@@ -290,25 +295,26 @@ def parse(env: Mapping[str, str],
         else:
             sensor_id = value
 
-    # DATA_PORT: the port the sensor sends its multicast stream to.
+    # DATA_PORT: the port the Carbon client binds (binding_address); the sensor streams to it.
     data_port = DEFAULT_DATA_PORT
     value = get("DATA_PORT")
     if value:
         if not _PORT_RE.fullmatch(value) or not MIN_PORT <= int(value) <= MAX_PORT:
             problems.append(f"DATA_PORT={shown(value)} is not a usable UDP port; accepted: a whole "
                             f"number {MIN_PORT}-{MAX_PORT} without leading zeros (default "
-                            f"{DEFAULT_DATA_PORT}, the port the sensor streams to)")
+                            f"{DEFAULT_DATA_PORT}, the port the Carbon client binds)")
         else:
             data_port = int(value)
 
-    # DEVICE_PORT: the driver never talks to the sensor.
+    # DEVICE_PORT: the client talks to the sensor's register port, which is the sensor's.
     value = get("DEVICE_PORT")
     if value is not None:
         problems.append(f"DEVICE_PORT={shown(value)} is not supported by this image; accepted: "
-                        "unset. The Voyant driver only receives the sensor's multicast stream on "
-                        "DATA_PORT; it does not use the sensor's control interface")
+                        "unset. The Carbon client talks to the sensor's register port "
+                        f"{SENSOR_REGISTER_PORT} (the sensor's, not a setting); only DATA_PORT "
+                        "(the port it receives on) is a setting")
 
-    # HOST_IP: the host's address on the sensor network, where the driver joins the group.
+    # HOST_IP: the host's address on the sensor network (interface_address).
     host_ip = None
     host = None
     value = get("HOST_IP")
@@ -317,7 +323,7 @@ def parse(env: Mapping[str, str],
         if "/" in value and not _PREFIX_RE.fullmatch(prefix):
             problems.append(f"HOST_IP={shown(value)} has no usable prefix length; accepted: the "
                             "host's IPv4 address on the sensor network, optionally with /1-/32, for "
-                            "example 192.168.20.100/24")
+                            "example 192.168.1.100/24")
         else:
             host = _ipv4("HOST_IP", address, problems,
                          "the host's IPv4 address on the sensor network (optionally with /1-/32)")
@@ -358,22 +364,25 @@ def parse(env: Mapping[str, str],
         else:
             topic = value
 
-    # TIME_MODE. voyant-api 0.4.4's client stamps each frame with the host's clock when the frame
-    # starts to arrive; it passes no sensor clock through (Voyant: do not use the message stamps
-    # of Meadowlark units).
-    time_mode = "host"
+    # TIME_MODE. voyant-api 1.0 stamps each frame with the sensor FPGA's time, and the (primary)
+    # client disciplines that clock to the host's continuously (vendor: sub-100 us), so "sensor"
+    # is host-synchronised time from the sensor; "host" is the ROS clock when the node converts
+    # the frame (timestamp_mode 1, TIME_FROM_ROS).
+    time_mode = "sensor"
     value = get("TIME_MODE")
     if value:
         word = value.lower()
-        if word in ("sensor", "gps", "ptp", "ntp"):
+        if word in ("sensor", "host"):
+            time_mode = word
+        elif word in ("gps", "ptp", "ntp"):
             problems.append(f"TIME_MODE={shown(value)} is not supported by this image; accepted: "
-                            "host (the default). voyant-api 0.4.4 stamps every frame with the "
-                            "host's clock as it arrives and passes no sensor clock through; keep "
-                            "the host's clock synchronised instead")
-        elif word != "host":
-            problems.append(f"TIME_MODE={shown(value)} is not a time mode; accepted, any case: host "
-                            "(stamp with the host's clock as the frame arrives, the default and "
-                            "only mode of this image)")
+                            "sensor (the default) or host. The Carbon client disciplines the "
+                            "sensor's clock to the host's; keep the host's clock synchronised "
+                            "(PTP or NTP on the host) instead")
+        else:
+            problems.append(f"TIME_MODE={shown(value)} is not a time mode; accepted, any case: "
+                            "sensor (the sensor's frame time, its clock disciplined to the host's; "
+                            "the default) or host (the host's clock when the node publishes)")
 
     # PUBLISH_SCAN: the driver has no LaserScan output.
     value = get("PUBLISH_SCAN")
@@ -425,7 +434,7 @@ def parse(env: Mapping[str, str],
                 problems.append(f"HOST_IP is not set and this host has no route to SENSOR_IP="
                                 f"{sensor} ({exc.strerror or exc}); accepted: set HOST_IP to the "
                                 "host's address on the sensor network, for example "
-                                "192.168.20.100/24")
+                                "192.168.1.100/24")
 
     if problems:
         raise Refused(problems)
@@ -444,16 +453,21 @@ def parse(env: Mapping[str, str],
 def parameters(s: Settings) -> list[tuple[str, str, object, str]]:
     """(name, type, value, why) for every parameter the node declares, in declaration order."""
     return [
-        ("binding_address", "string", f"0.0.0.0:{s.data_port}",
-         "DATA_PORT on every address (the multicast stream)"),
-        ("multicast_group", "string", MULTICAST_GROUP, "the Meadowlark stream's group"),
+        ("binding_address", "string", f"0.0.0.0:{s.data_port}", "DATA_PORT on every address"),
+        ("multicast_group", "string", MULTICAST_GROUP, "the vendor's default group"),
         ("interface_address", "string", s.interface_address,
-         f"join the group on this host address ({s.interface_from})"),
-        ("spn_filter", "bool", True,
-         "publish valid points only (drop_reason SUCCESS), as the released image does"),
-        ("timestamp_mode", "int", 0, "TIME_MODE host: the client's frame stamp (host clock)"),
+         f"the host's address on the sensor network ({s.interface_from})"),
+        ("fpga_target_address", "string", f"{s.sensor_ip}:{SENSOR_REGISTER_PORT}",
+         "SENSOR_IP: the sensor's register port (push destination, clock, SDL)"),
+        ("stream_transport", "string", "unicast",
+         "the sensor sends to this client only (the vendor's default)"),
+        ("observer_only", "bool", False,
+         "this driver is the sensor's one primary client (it configures the sensor and its clock)"),
+        ("diagnostic_mode", "bool", False, "valid points only, as the vendor's default"),
+        ("timestamp_mode", "int", 0 if s.time_mode == "sensor" else 1,
+         "TIME_MODE sensor: the sensor's frame time (TIME_FROM_SENSOR)" if s.time_mode == "sensor"
+         else "TIME_MODE host: the ROS clock (TIME_FROM_ROS)"),
         ("frame_id", "string", s.frame_id, "FRAME_ID"),
-        ("point_format", "int", 1, "MDL_STANDARD: x y z v snr drop_reason timestamp_nsecs point_idx"),
     ]
 
 
@@ -468,9 +482,12 @@ def _yaml_value(kind: str, value: object) -> str:
 def render(s: Settings) -> str:
     lines = [
         "# Rendered from the environment by the voyant-driver image entrypoint; do not edit.",
-        f"# LIDAR_MODEL {s.model.key} = {s.model.label}; SENSOR_IP {s.sensor_ip} (the driver joins "
-        f"the multicast group {MULTICAST_GROUP} on port {s.data_port} and does not filter by sender)",
-        f"# TIME_MODE {s.time_mode}: frames are stamped with the host's clock as they arrive",
+        f"# LIDAR_MODEL {s.model.key} = {s.model.label}; SENSOR_IP {s.sensor_ip}; the client "
+        f"receives on port {s.data_port} ({s.interface_address}) and is the sensor's primary "
+        "client",
+        f"# TIME_MODE {s.time_mode}: " + ("the sensor's frame time (its clock disciplined to the "
+                                          "host's)" if s.time_mode == "sensor" else
+                                          "the host's ROS clock when the node publishes"),
         f"# topic {s.resolved_topic}, frame {s.frame_id}",
         "/**:",
         "  ros__parameters:",
@@ -496,6 +513,7 @@ def describe(s: Settings) -> dict:
         "multicast_group": MULTICAST_GROUP,
         "interface_address": s.interface_address,
         "interface_from": s.interface_from,
+        "sensor_register_address": f"{s.sensor_ip}:{SENSOR_REGISTER_PORT}",
         "topic": s.resolved_topic,
         "metadata_topic": s.namespace.rstrip("/") + "/device_metadata",
         "frame_id": s.frame_id,
@@ -557,8 +575,8 @@ def cmd_run(env: Mapping[str, str]) -> int:
                        f"{os.getuid()}; accepted: a writable /tmp, for example docker run "
                        "--tmpfs /tmp or compose 'tmpfs: [/tmp]' with a read-only root filesystem "
                        "(or point VOYANT_RUN_DIR and ROS_LOG_DIR at a writable volume)"])
-    print(f"{PROG}: {s.model.label} at {s.sensor_ip}: group {MULTICAST_GROUP} port "
-          f"{s.data_port} on {s.interface_address} ({s.interface_from}), topic "
+    print(f"{PROG}: {s.model.label} at {s.sensor_ip}: port {s.data_port} on "
+          f"{s.interface_address} ({s.interface_from}), topic "
           f"{s.resolved_topic}, frame {s.frame_id}, time {s.time_mode}, parameters "
           f"{s.params_path}", file=sys.stderr, flush=True)
     argv = node_argv(s)
@@ -597,8 +615,8 @@ def contract_problems(source: str) -> list[str]:
     """What in the driver source no longer matches what the contract sets."""
     problems = []
     declared = declared_parameters(source)
-    sample = parse({"LIDAR_MODEL": "meadowlark", "SENSOR_IP": "192.168.20.20",
-                    "HOST_IP": "192.168.20.100"})
+    sample = parse({"LIDAR_MODEL": "carbon", "SENSOR_IP": "192.168.1.20",
+                    "HOST_IP": "192.168.1.100"})
     for name, kind, _, _ in parameters(sample):
         if declared.get(name) != kind:
             problems.append(f"the node declares {name} as {declared.get(name)}, the contract sets "

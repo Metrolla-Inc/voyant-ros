@@ -2,10 +2,10 @@ exit: 1
 --- stdout
 {
   "refused": [
-    "LIDAR_MODEL is not set; accepted (any case, '_' or '-', optional 'voyant-' prefix): meadowlark, mdl, carbon-dev-kit, carbon-devkit",
-    "SENSOR_IP is not set; accepted: the sensor's own IPv4 address, for example 192.168.20.20 (the Meadowlark factory address)"
+    "LIDAR_MODEL is not set; accepted (any case, '_' or '-', optional 'voyant-' prefix): carbon",
+    "SENSOR_IP is not set; accepted: the sensor's own IPv4 address, for example 192.168.1.128"
   ]
 }
 --- stderr
-voyant-driver: refusing to start: LIDAR_MODEL is not set; accepted (any case, '_' or '-', optional 'voyant-' prefix): meadowlark, mdl, carbon-dev-kit, carbon-devkit
-voyant-driver: refusing to start: SENSOR_IP is not set; accepted: the sensor's own IPv4 address, for example 192.168.20.20 (the Meadowlark factory address)
+voyant-driver: refusing to start: LIDAR_MODEL is not set; accepted (any case, '_' or '-', optional 'voyant-' prefix): carbon
+voyant-driver: refusing to start: SENSOR_IP is not set; accepted: the sensor's own IPv4 address, for example 192.168.1.128

@@ -1,14 +1,23 @@
-// Reference receiver for the smoke test (docker/smoke/smoke.sh): joins the same multicast stream
-// as the driver with the Voyant client directly (no ROS) and writes one line per frame it
-// assembles, so check_cloud.py can match the driver's point clouds with the SDK's own frames.
+// Reference receiver for the smoke test (docker/smoke/smoke.sh): receives the same stream as the
+// driver with voyant-api's CarbonClient directly (no ROS) and writes one line per frame, so
+// check_cloud.py can match the driver's point clouds with the SDK's own frames.
 //
-// Usage: frame_dump BIND_ADDR GROUP_ADDR INTERFACE_ADDR FRAMES OUT_FILE
-// Line per frame: host receive time (ns), header seconds, header nanoseconds, frame index, number
-// of points, number of points with drop_reason SUCCESS, then FNV-1a 64 of all points and of the
-// SUCCESS points, each point packed little-endian as f32 x, y, z, radial velocity, snr; u8 drop
-// reason; i32 timestamp_nanosecs; u32 point index (29 bytes, as check_cloud.py packs them).
+// Usage: frame_dump BIND_ADDR GROUP_ADDR INTERFACE_ADDR FPGA_ADDR FRAMES OUT_FILE [diagnostic]
+// The client is an observer (observer_only: it sends nothing to the sensor, so it never competes
+// with the driver, the primary client) on multicast transport; "diagnostic" keeps the invalid
+// points (diagnostic_mode), so the driver's valid-only clouds can be matched with the valid subset.
+//
+// Line per frame: host receive time (ns), frame seconds, frame nanoseconds, frame index, number
+// of points, number of valid points (drop_reason 1), FNV-1a 64 of all points and of the valid
+// points, device id. Each point is hashed as the driver publishes it (include/voyant_ros/
+// conversion_utils.hpp, fillPointFromFrame): little-endian f32 x, y, z (NaN when range_m <= 0),
+// f32 v (doppler), f32 snr, u8 drop_reason, u32 timestamp_nsecs, u16 azimuth_idx,
+// u16 elevation_idx, f32 calibrated_reflectance, u32 frame_index (37 bytes; check_cloud.py
+// takes the same bytes out of each 48-byte ROS point).
 // Exit 0 after FRAMES frames; 1 when the client does not start or no frame arrives for 60 s.
-#include <voyant_client.hpp>
+#include <carbon_client.hpp>
+#include <carbon_config.hpp>
+#include <logging_utils_ffi.hpp>
 
 #include <chrono>
 #include <cinttypes>
@@ -16,6 +25,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <string>
 #include <thread>
 
@@ -34,37 +44,63 @@ struct Fnv
     }
   }
 };
+
+void pack(unsigned char *rec, const PointData &p, const VoyantVec3 &xyz, uint32_t frame_index)
+{
+  float pos[3] = {xyz.x, xyz.y, xyz.z};
+  if(!(p.range_m > 0.0f))
+  {
+    pos[0] = pos[1] = pos[2] = std::numeric_limits<float>::quiet_NaN();
+  }
+  const float vs[2] = {p.doppler_mps, p.snr};
+  std::memcpy(rec, pos, 12);
+  std::memcpy(rec + 12, vs, 8);
+  rec[20] = p.drop_reason;
+  std::memcpy(rec + 21, &p.timestamp_nanosecs, 4);
+  std::memcpy(rec + 25, &p.azimuth_idx, 2);
+  std::memcpy(rec + 27, &p.elevation_idx, 2);
+  std::memcpy(rec + 29, &p.calibrated_reflectance, 4);
+  std::memcpy(rec + 33, &frame_index, 4);
+}
 } // namespace
 
 int main(int argc, char **argv)
 {
-  if(argc != 6)
+  if(argc != 7 && !(argc == 8 && std::strcmp(argv[7], "diagnostic") == 0))
   {
-    std::fprintf(stderr, "usage: frame_dump BIND GROUP IFACE FRAMES OUT\n");
+    std::fprintf(stderr, "usage: frame_dump BIND GROUP IFACE FPGA FRAMES OUT [diagnostic]\n");
     return 2;
   }
-  const int frames = std::atoi(argv[4]);
-  // std::string, not char*: with char* arguments the compiler picks the unicast constructor
-  // VoyantClient(addr, bool filterPoints, bool disableSpn) (pointer-to-bool beats the conversion
-  // to std::string) and the client silently listens for unicast with both flags set.
-  const std::string bind(argv[1]), group(argv[2]), iface(argv[3]);
-  VoyantClient client(bind, group, iface);
-  if(!client.isValid())
+  voyant_log_init_c();
+  CarbonClient::setupSignalHandling(SIGINT);
+  CarbonClient::setupSignalHandling(SIGTERM);
+  const int frames = std::atoi(argv[5]);
+  CarbonConfig config;
+  config.setBindAddr(argv[1])
+      .setGroupAddr(argv[2])
+      .setInterfaceAddr(argv[3])
+      .setFpgaTargetAddr(argv[4])
+      .setStreamTransport(StreamTransport::Multicast)
+      .setObserverOnly(true)
+      .setDiagnosticMode(argc == 8);
+  CarbonClient client(config);
+  if(!client.start())
   {
-    std::fprintf(stderr, "frame_dump: client not valid\n");
+    std::fprintf(stderr, "frame_dump: the Carbon client did not start\n");
     return 1;
   }
-  std::FILE *out = std::fopen(argv[5], "w");
+  std::FILE *out = std::fopen(argv[6], "w");
   if(out == nullptr)
   {
-    std::perror(argv[5]);
+    std::perror(argv[6]);
     return 1;
   }
   int got = 0;
   auto last = std::chrono::steady_clock::now();
-  while(got < frames)
+  while(got < frames && client.isRunning() && !CarbonClient::isTerminated())
   {
-    if(!client.tryReceiveNextFrame())
+    auto frame = client.tryReceiveFrame();
+    if(!frame)
     {
       if(std::chrono::steady_clock::now() - last > std::chrono::seconds(60))
       {
@@ -79,42 +115,37 @@ int main(int argc, char **argv)
     const auto now = std::chrono::duration_cast<std::chrono::nanoseconds>(
                          std::chrono::system_clock::now().time_since_epoch())
                          .count();
-    VoyantFrameWrapper &frame = client.latestFrame();
+    const std::vector<PointData> &points = frame->points();
+    const std::vector<VoyantVec3> xyz = frame->xyz();
     Fnv all, ok;
     size_t n_ok = 0;
-    for(const auto &p : frame.points())
+    for(size_t i = 0; i < points.size(); ++i)
     {
-      unsigned char rec[29];
-      const float f[5] = {p.x(), p.y(), p.z(), p.radial_vel(), p.snr_linear()};
-      const uint8_t drop = static_cast<uint8_t>(p.drop_reason());
-      const int32_t ts = p.timestamp_nanosecs();
-      const uint32_t idx = p.point_index();
-      std::memcpy(rec, f, 20);
-      rec[20] = drop;
-      std::memcpy(rec + 21, &ts, 4);
-      std::memcpy(rec + 25, &idx, 4);
+      unsigned char rec[37];
+      pack(rec, points[i], xyz[i], frame->frameIndex());
       all.add(rec, sizeof(rec));
-      if(p.drop_reason() == DropReason::SUCCESS)
+      if(isValidPoint(points[i]))
       {
         ok.add(rec, sizeof(rec));
         ++n_ok;
       }
     }
     std::fprintf(out,
-                 "%" PRId64 " %u %u %u %zu %zu %016" PRIx64 " %016" PRIx64 " %s\n",
+                 "%" PRId64 " %" PRId64 " %d %u %zu %zu %016" PRIx64 " %016" PRIx64 " %s\n",
                  static_cast<int64_t>(now),
-                 static_cast<unsigned>(frame.header().timestampSeconds()),
-                 static_cast<unsigned>(frame.header().timestampNanoseconds()),
-                 static_cast<unsigned>(frame.header().frameIndex()),
-                 frame.points().size(),
+                 static_cast<int64_t>(frame->timestampSeconds()),
+                 static_cast<int>(frame->timestampNanoseconds()),
+                 static_cast<unsigned>(frame->frameIndex()),
+                 points.size(),
                  n_ok,
                  all.h,
                  ok.h,
-                 frame.header().deviceId().c_str());
+                 frame->deviceId().c_str());
     std::fflush(out);
     ++got;
   }
+  client.stop();
   std::fclose(out);
   std::fprintf(stderr, "frame_dump: %d frames\n", got);
-  return 0;
+  return got == frames ? 0 : 1;
 }

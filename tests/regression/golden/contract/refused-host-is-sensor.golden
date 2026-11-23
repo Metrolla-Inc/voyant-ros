@@ -1,4 +1,4 @@
 exit: 1
 --- stdout
 --- stderr
-voyant-driver: refusing to start: HOST_IP='192.168.20.20/24' is the sensor's own address; accepted: the host's address on the sensor network
+voyant-driver: refusing to start: HOST_IP='192.168.1.128/24' is the sensor's own address; accepted: the host's address on the sensor network

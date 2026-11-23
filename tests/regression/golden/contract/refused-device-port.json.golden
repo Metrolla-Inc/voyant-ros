@@ -2,8 +2,8 @@ exit: 1
 --- stdout
 {
   "refused": [
-    "DEVICE_PORT='8080' is not supported by this image; accepted: unset. The Voyant driver only receives the sensor's multicast stream on DATA_PORT; it does not use the sensor's control interface"
+    "DEVICE_PORT='1234' is not supported by this image; accepted: unset. The Carbon client talks to the sensor's register port 1234 (the sensor's, not a setting); only DATA_PORT (the port it receives on) is a setting"
   ]
 }
 --- stderr
-voyant-driver: refusing to start: DEVICE_PORT='8080' is not supported by this image; accepted: unset. The Voyant driver only receives the sensor's multicast stream on DATA_PORT; it does not use the sensor's control interface
+voyant-driver: refusing to start: DEVICE_PORT='1234' is not supported by this image; accepted: unset. The Carbon client talks to the sensor's register port 1234 (the sensor's, not a setting); only DATA_PORT (the port it receives on) is a setting
